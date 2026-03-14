@@ -173,6 +173,8 @@ a{color:var(--blue);text-decoration:none}
 .vocab-item-reading{font-size:.8rem;color:var(--gold)}
 .vocab-item-meaning{font-size:.85rem;color:var(--muted);flex:1}
 .vocab-item-del{background:none;border:none;color:var(--red);font-size:1rem;cursor:pointer;padding:4px 8px}
+.n5-badge{display:inline-block;background:var(--red);color:white;font-size:.55rem;font-weight:700;
+  padding:1px 5px;border-radius:4px;margin-left:6px;vertical-align:middle;letter-spacing:.5px}
 .vocab-empty{text-align:center;padding:60px 24px;color:var(--muted);font-size:.9rem}
 .vocab-quiz-btn{display:block;margin:16px auto;padding:12px 32px;border-radius:12px;border:none;
   background:linear-gradient(135deg,var(--blue),var(--purple));color:white;font-size:.9rem;
@@ -384,11 +386,16 @@ select.setting-select{background:var(--card);color:var(--text);border:1px solid 
 
 <script type="module">
 import { STORIES } from "./data/stories.js";
+import { N5_WORDS } from "./data/n5-words.js";
 import { getState, saveState, updateState, addXP, xpForLevel, checkStreak, recordActivity,
          getStoryProgress, updateStoryProgress, saveWord, getSavedWords, removeWord,
          recordQuizResult, exportData, importData, resetData } from "./modules/state.js";
 import { speakJapanese, stopSpeaking } from "./modules/tts.js";
 import { $, qs, qsa, switchTab, showScreen, showToast, confetti, shuffleArray } from "./modules/ui.js";
+
+function isN5Word(word) {
+  return N5_WORDS.has(word);
+}
 
 // ===================== INIT =====================
 let currentStory = null;
@@ -448,9 +455,20 @@ function openStory(storyId) {
   currentStory = STORIES.find(s => s.id === storyId);
   if (!currentStory) return;
   $("mangaTitle").textContent = `${currentStory.title} ${currentStory.titleKr}`;
+  // Auto-save all vocab from this story
+  autoSaveAllVocab(currentStory);
   renderPanels();
   showScreen("tab-manga", "reader");
   recordActivity();
+}
+
+function autoSaveAllVocab(story) {
+  story.panels.forEach(panel => {
+    if (!panel.vocab) return;
+    panel.vocab.forEach(v => {
+      saveWord(v, story.id, panel.jp);
+    });
+  });
 }
 
 function renderPanels() {
@@ -723,7 +741,9 @@ function renderVocabTab() {
   // Filter buttons
   const storyIds = Object.keys(byStory);
   const filterEl = $("vocabFilter");
+  const n5Words = words.filter(w => isN5Word(w.word) || (w.reading && isN5Word(w.reading)));
   filterEl.innerHTML = `<button class="active" data-filter="all">전체 (${words.length})</button>` +
+    `<button data-filter="n5" style="border-color:var(--red);color:var(--red)">🔴 N5필수 (${n5Words.length})</button>` +
     storyIds.map(sid => {
       const story = STORIES.find(s => s.id === sid);
       const label = story ? `${story.icon} ${story.title}` : sid;
@@ -737,7 +757,9 @@ function renderVocabTab() {
       filterEl.querySelectorAll("button").forEach(b => b.classList.remove("active"));
       btn.classList.add("active");
       const f = btn.dataset.filter;
-      renderVocabList(f === "all" ? words : byStory[f] || []);
+      if (f === "all") renderVocabList(words);
+      else if (f === "n5") renderVocabList(n5Words);
+      else renderVocabList(byStory[f] || []);
     });
   });
 
@@ -750,14 +772,17 @@ function renderVocabList(words) {
     list.innerHTML = `<div class="vocab-empty">단어가 없습니다</div>`;
     return;
   }
-  list.innerHTML = words.map(w => `<div class="vocab-item">
+  list.innerHTML = words.map(w => {
+    const n5 = isN5Word(w.word) || (w.reading && isN5Word(w.reading));
+    return `<div class="vocab-item">
     <div>
-      <div class="vocab-item-word">${w.word}</div>
+      <div class="vocab-item-word">${w.word}${n5 ? `<span class="n5-badge">N5</span>` : ""}</div>
       ${w.reading ? `<div class="vocab-item-reading">${w.reading}</div>` : ""}
     </div>
     <div class="vocab-item-meaning">${w.meaning}</div>
     <button class="vocab-item-del" data-word="${w.word}">✕</button>
-  </div>`).join("");
+  </div>`;
+  }).join("");
 
   list.querySelectorAll(".vocab-item-del").forEach(btn => {
     btn.addEventListener("click", () => {

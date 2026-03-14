@@ -1,9 +1,10 @@
-const CACHE_NAME = "manga-n5-v1";
+const CACHE_NAME = "manga-n5-v2";
 const ASSETS = [
   "./",
   "./index.html",
   "./manifest.json",
   "./data/stories.js",
+  "./data/n5-words.js",
   "./modules/state.js",
   "./modules/tts.js",
   "./modules/ui.js"
