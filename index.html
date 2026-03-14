@@ -1,0 +1,961 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="theme-color" content="#0f172a">
+<link rel="manifest" href="manifest.json">
+<link rel="apple-touch-icon" href="icons/icon-192.png">
+<title>만화 N5</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+:root{
+  --bg:#0f172a;--card:#1e293b;--card2:#334155;--text:#f1f5f9;--muted:#94a3b8;--border:#475569;
+  --gold:#f59e0b;--purple:#7c3aed;--blue:#2563eb;--green:#10b981;--red:#ef4444;--pink:#ec4899;
+  --orange:#f97316;
+}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','Hiragino Sans',sans-serif;
+  background:var(--bg);color:var(--text);max-width:480px;margin:0 auto;
+  min-height:100vh;min-height:100dvh;user-select:none;-webkit-user-select:none;
+  padding-bottom:calc(60px + env(safe-area-inset-bottom))}
+a{color:var(--blue);text-decoration:none}
+
+/* Header */
+.app-header{padding:12px 16px;display:flex;justify-content:space-between;align-items:center;
+  border-bottom:1px solid var(--border)}
+.app-title{font-size:1.1rem;font-weight:700;
+  background:linear-gradient(135deg,var(--gold),var(--orange));-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+.header-stats{display:flex;gap:10px;align-items:center;font-size:.8rem}
+.header-streak{background:linear-gradient(135deg,var(--orange),var(--red));padding:2px 8px;border-radius:12px;font-weight:600}
+.header-lv{color:var(--gold);font-weight:600}
+.xp-bar{height:4px;background:var(--card2);border-radius:2px;margin:0 16px 4px}
+.xp-fill{height:100%;background:linear-gradient(90deg,var(--blue),var(--purple));border-radius:2px;transition:width .3s}
+.xp-text{text-align:right;font-size:.65rem;color:var(--muted);margin:0 16px 8px}
+
+/* Tabs */
+.tab-bar{position:fixed;bottom:0;left:0;right:0;background:var(--card);
+  border-top:1px solid var(--border);display:flex;justify-content:center;
+  padding-bottom:env(safe-area-inset-bottom);z-index:100;max-width:480px;margin:0 auto}
+.tab-btn{flex:1;padding:8px 0 4px;text-align:center;font-size:.65rem;color:var(--muted);
+  background:none;border:none;cursor:pointer;transition:color .2s}
+.tab-btn .tab-icon{font-size:1.3rem;display:block;margin-bottom:2px}
+.tab-btn.active{color:var(--gold)}
+.tab-content{display:none}
+.tab-content.active{display:block}
+
+/* Screen toggle */
+.screen{display:none}
+
+/* Cards */
+.story-card{background:var(--card);border-radius:16px;padding:16px;margin:8px 16px;
+  border:2px solid var(--border);cursor:pointer;transition:transform .15s,border-color .15s;
+  display:flex;align-items:center;gap:14px}
+.story-card:active{transform:scale(.97)}
+.story-card.completed{border-color:var(--green)}
+.story-card.reading{border-color:var(--gold)}
+.story-icon{font-size:2.5rem;min-width:50px;text-align:center}
+.story-info{flex:1}
+.story-title-jp{font-size:1rem;font-weight:700;margin-bottom:2px}
+.story-title-kr{font-size:.75rem;color:var(--muted)}
+.story-progress{margin-top:6px;height:4px;background:var(--card2);border-radius:2px}
+.story-progress-fill{height:100%;border-radius:2px;background:linear-gradient(90deg,var(--gold),var(--orange));transition:width .3s}
+.story-badge{font-size:.7rem;color:var(--green);margin-top:4px}
+
+/* Manga Viewer */
+.manga-header{display:flex;align-items:center;padding:12px 16px;gap:10px;
+  border-bottom:1px solid var(--border);position:sticky;top:0;background:var(--bg);z-index:10}
+.manga-back{background:none;border:none;color:var(--text);font-size:1.2rem;cursor:pointer;padding:4px}
+.manga-title{flex:1;font-size:.9rem;font-weight:600}
+.manga-toggles{display:flex;gap:6px}
+.toggle-btn{padding:4px 10px;border-radius:8px;border:1px solid var(--border);background:var(--card);
+  color:var(--muted);font-size:.7rem;cursor:pointer;font-weight:600;transition:all .2s}
+.toggle-btn.active{background:var(--blue);color:white;border-color:var(--blue)}
+
+/* Panel */
+.manga-panels{padding:8px 12px 24px}
+.panel{border-radius:16px;margin-bottom:16px;overflow:hidden;border:2px solid var(--border);
+  position:relative}
+.panel-scene{padding:20px 16px 12px;min-height:120px;display:flex;flex-direction:column;
+  align-items:center;justify-content:center;gap:8px;position:relative}
+/* Scene backgrounds */
+.scene-river{background:linear-gradient(180deg,#1a3a5c,#2980b9)}
+.scene-mountain{background:linear-gradient(180deg,#1a3c2a,#27ae60)}
+.scene-home{background:linear-gradient(180deg,#3c2a1a,#e67e22)}
+.scene-battle{background:linear-gradient(180deg,#3c1a1a,#c0392b)}
+.scene-palace{background:linear-gradient(180deg,#2a1a3c,#8e44ad)}
+.scene-sea{background:linear-gradient(180deg,#0a1a3c,#2c3e50)}
+.scene-forest{background:linear-gradient(180deg,#0a2a1a,#1e8449)}
+.scene-sky{background:linear-gradient(180deg,#1a3a5c,#5dade2)}
+
+.panel-illust{font-size:3rem;letter-spacing:8px;text-shadow:0 2px 8px rgba(0,0,0,.3);
+  animation:float 3s ease-in-out infinite}
+@keyframes float{0%,100%{transform:translateY(0)}50%{transform:translateY(-6px)}}
+
+.panel-sfx{font-size:1.4rem;font-weight:900;color:#fff;text-shadow:2px 2px 0 rgba(0,0,0,.5),
+  -1px -1px 0 var(--red);letter-spacing:4px;
+  font-style:italic;transform:rotate(-3deg);margin-top:4px}
+
+.panel-body{background:var(--card);padding:14px 16px}
+.panel-jp{font-size:1.05rem;line-height:1.8;margin-bottom:6px;word-break:keep-all}
+.panel-jp ruby{font-size:.6em;color:var(--gold)}
+.panel-jp .vocab-word{border-bottom:1px dashed var(--gold);cursor:pointer;
+  transition:background .2s;padding:0 1px;border-radius:2px}
+.panel-jp .vocab-word:active{background:rgba(245,158,11,.2)}
+.panel-kr{font-size:.8rem;color:var(--muted);line-height:1.5;display:none}
+.panel-kr.show{display:block}
+.panel-grammar{font-size:.7rem;color:var(--purple);margin-top:6px;font-style:italic}
+.panel-controls{display:flex;gap:8px;margin-top:10px;align-items:center}
+.panel-tts{background:none;border:none;font-size:1.1rem;cursor:pointer;padding:4px;opacity:.7;
+  transition:opacity .2s}
+.panel-tts:active{opacity:1}
+.panel-kr-toggle{background:none;border:1px solid var(--border);color:var(--muted);
+  font-size:.65rem;padding:3px 8px;border-radius:6px;cursor:pointer}
+.panel-kr-toggle.active{color:var(--gold);border-color:var(--gold)}
+.panel-num{font-size:.6rem;color:var(--muted);margin-left:auto}
+
+/* Furigana hide */
+.hide-furigana ruby rt{visibility:hidden}
+
+/* Vocab Popup */
+.vocab-popup{position:fixed;bottom:0;left:0;right:0;max-width:480px;margin:0 auto;
+  background:var(--card);border-top:2px solid var(--gold);padding:20px 24px calc(20px + env(safe-area-inset-bottom));
+  z-index:200;transform:translateY(100%);transition:transform .3s ease}
+.vocab-popup.show{transform:translateY(0)}
+.vocab-popup-word{font-size:1.5rem;font-weight:700;margin-bottom:4px}
+.vocab-popup-reading{font-size:.9rem;color:var(--gold);margin-bottom:4px}
+.vocab-popup-meaning{font-size:1rem;margin-bottom:12px}
+.vocab-popup-btns{display:flex;gap:10px}
+.vocab-popup-btns button{flex:1;padding:10px;border-radius:10px;border:none;font-size:.85rem;
+  font-weight:600;cursor:pointer}
+.btn-save{background:var(--gold);color:#000}
+.btn-close{background:var(--card2);color:var(--text)}
+
+/* Quiz Screen */
+.quiz-header{padding:16px;text-align:center}
+.quiz-header h2{font-size:1.1rem;margin-bottom:8px}
+.quiz-progress{display:flex;gap:4px;justify-content:center;margin-bottom:12px}
+.quiz-dot{width:10px;height:10px;border-radius:50%;background:var(--card2)}
+.quiz-dot.correct{background:var(--green)}
+.quiz-dot.wrong{background:var(--red)}
+.quiz-dot.current{background:var(--gold);box-shadow:0 0 6px var(--gold)}
+.quiz-question{background:var(--card);border-radius:14px;padding:20px;margin:0 16px 16px;
+  font-size:1rem;line-height:1.6}
+.quiz-question-kr{font-size:.8rem;color:var(--muted);margin-top:8px}
+.quiz-choices{padding:0 16px}
+.quiz-choice{display:block;width:100%;padding:14px 16px;margin-bottom:10px;border-radius:12px;
+  border:2px solid var(--border);background:var(--card);color:var(--text);font-size:.95rem;
+  text-align:left;cursor:pointer;transition:all .2s}
+.quiz-choice:active{transform:scale(.98)}
+.quiz-choice.correct{border-color:var(--green);background:rgba(16,185,129,.15)}
+.quiz-choice.wrong{border-color:var(--red);background:rgba(239,68,68,.15)}
+.quiz-choice:disabled{cursor:default}
+
+/* Quiz Result */
+.quiz-result{text-align:center;padding:40px 24px}
+.quiz-result-score{font-size:3rem;font-weight:800;
+  background:linear-gradient(135deg,var(--gold),var(--orange));-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+.quiz-result-label{font-size:1rem;color:var(--muted);margin-bottom:20px}
+.quiz-result-detail{font-size:.85rem;color:var(--muted);margin-bottom:24px}
+.quiz-result-btn{padding:14px 40px;border-radius:12px;border:none;font-size:1rem;font-weight:700;
+  cursor:pointer;background:linear-gradient(135deg,var(--blue),var(--purple));color:white}
+
+/* Vocab Tab */
+.vocab-list{padding:8px 16px}
+.vocab-filter{display:flex;gap:8px;padding:8px 16px;overflow-x:auto}
+.vocab-filter button{padding:6px 14px;border-radius:8px;border:1px solid var(--border);
+  background:var(--card);color:var(--muted);font-size:.75rem;cursor:pointer;white-space:nowrap}
+.vocab-filter button.active{background:var(--gold);color:#000;border-color:var(--gold)}
+.vocab-item{display:flex;align-items:center;padding:12px;background:var(--card);border-radius:10px;
+  margin-bottom:8px;gap:12px}
+.vocab-item-word{font-size:1.1rem;font-weight:600;min-width:80px}
+.vocab-item-reading{font-size:.8rem;color:var(--gold)}
+.vocab-item-meaning{font-size:.85rem;color:var(--muted);flex:1}
+.vocab-item-del{background:none;border:none;color:var(--red);font-size:1rem;cursor:pointer;padding:4px 8px}
+.vocab-empty{text-align:center;padding:60px 24px;color:var(--muted);font-size:.9rem}
+.vocab-quiz-btn{display:block;margin:16px auto;padding:12px 32px;border-radius:12px;border:none;
+  background:linear-gradient(135deg,var(--blue),var(--purple));color:white;font-size:.9rem;
+  font-weight:600;cursor:pointer}
+
+/* My Page */
+.my-section{padding:16px}
+.my-section h3{font-size:.9rem;color:var(--gold);margin-bottom:12px}
+.stats-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:20px}
+.stat-card{background:var(--card);border-radius:12px;padding:12px;text-align:center}
+.stat-val{font-size:1.4rem;font-weight:700}
+.stat-label{font-size:.65rem;color:var(--muted);margin-top:2px}
+.progress-grid{display:grid;grid-template-columns:repeat(5,1fr);gap:4px;margin-bottom:16px}
+.progress-story{background:var(--card);border-radius:8px;padding:8px;text-align:center;font-size:1.5rem}
+.progress-story.completed{border:2px solid var(--green)}
+.progress-story-title{font-size:.55rem;color:var(--muted);margin-top:4px}
+
+/* Settings */
+.setting-row{display:flex;justify-content:space-between;align-items:center;
+  padding:14px 0;border-bottom:1px solid var(--border)}
+.setting-label{font-size:.85rem}
+.setting-desc{font-size:.7rem;color:var(--muted)}
+.toggle-switch{width:44px;height:24px;border-radius:12px;background:var(--card2);position:relative;
+  cursor:pointer;transition:background .2s;border:none}
+.toggle-switch.on{background:var(--green)}
+.toggle-switch::after{content:'';position:absolute;width:20px;height:20px;border-radius:50%;
+  background:white;top:2px;left:2px;transition:transform .2s}
+.toggle-switch.on::after{transform:translateX(20px)}
+select.setting-select{background:var(--card);color:var(--text);border:1px solid var(--border);
+  border-radius:8px;padding:6px 10px;font-size:.85rem}
+.danger-btn{background:var(--red);color:white;border:none;padding:10px 20px;border-radius:10px;
+  font-size:.85rem;cursor:pointer;margin-top:12px}
+.backup-btns{display:flex;gap:10px;margin-top:12px}
+.backup-btns button{flex:1;padding:10px;border-radius:10px;border:1px solid var(--border);
+  background:var(--card);color:var(--text);font-size:.8rem;cursor:pointer}
+
+/* Toast */
+.toast{position:fixed;top:20px;left:50%;transform:translateX(-50%) translateY(-100px);
+  padding:10px 20px;border-radius:10px;font-size:.85rem;z-index:300;transition:transform .3s;
+  max-width:90%;text-align:center}
+.toast-success{background:var(--green);color:white}
+.toast-info{background:var(--blue);color:white}
+.toast-error{background:var(--red);color:white}
+.toast.show{transform:translateX(-50%) translateY(0)}
+
+/* Confetti */
+.confetti-piece{position:fixed;width:8px;height:8px;border-radius:2px;z-index:300;
+  pointer-events:none;animation:confettiFall 2s ease forwards}
+@keyframes confettiFall{0%{opacity:1;transform:translateY(0) rotate(0deg)}
+  100%{opacity:0;transform:translateY(100vh) rotate(720deg)}}
+
+/* Story Complete Overlay */
+.story-complete{text-align:center;padding:40px 24px}
+.story-complete-icon{font-size:4rem;margin-bottom:12px}
+.story-complete h2{font-size:1.3rem;margin-bottom:8px}
+.story-complete p{color:var(--muted);font-size:.9rem;margin-bottom:24px}
+.story-complete-btn{padding:14px 40px;border-radius:12px;border:none;font-size:1rem;font-weight:700;
+  cursor:pointer;background:linear-gradient(135deg,var(--gold),var(--orange));color:#000;
+  margin:0 8px}
+
+/* Scroll hint */
+.scroll-hint{text-align:center;padding:20px;color:var(--muted);font-size:.8rem;animation:pulse 2s infinite}
+@keyframes pulse{0%,100%{opacity:.5}50%{opacity:1}}
+</style>
+</head>
+<body>
+
+<!-- Header -->
+<div class="app-header">
+  <div class="app-title">만화 N5 📖</div>
+  <div class="header-stats">
+    <span class="header-streak" id="headerStreak">🔥 0</span>
+    <span class="header-lv" id="headerLv">Lv.1</span>
+  </div>
+</div>
+<div class="xp-bar"><div class="xp-fill" id="xpFill" style="width:0%"></div></div>
+<div class="xp-text" id="xpText">0 / 200 XP</div>
+
+<!-- Tab: Manga -->
+<div class="tab-content active" id="tab-manga">
+  <!-- Story List Screen -->
+  <div class="screen" id="tab-manga-list" style="display:block">
+    <div style="padding:16px 16px 8px">
+      <h2 style="font-size:1rem;margin-bottom:4px">일본 옛날이야기</h2>
+      <p style="font-size:.75rem;color:var(--muted)">만화로 읽으며 자연스럽게 N5 일본어를 익혀요</p>
+    </div>
+    <div id="storyList"></div>
+  </div>
+
+  <!-- Manga Reader Screen -->
+  <div class="screen" id="tab-manga-reader">
+    <div class="manga-header">
+      <button class="manga-back" id="mangaBack">←</button>
+      <div class="manga-title" id="mangaTitle"></div>
+      <div class="manga-toggles">
+        <button class="toggle-btn" id="toggleFuri">ふり</button>
+        <button class="toggle-btn" id="toggleKr">한</button>
+        <button class="toggle-btn" id="playAllBtn">▶ 전체</button>
+      </div>
+    </div>
+    <div class="manga-panels" id="mangaPanels"></div>
+    <div class="scroll-hint" id="scrollHint">↓ 스크롤하여 계속 읽기</div>
+    <div style="text-align:center;padding:20px">
+      <button class="quiz-result-btn" id="startQuizBtn" style="display:none">📝 이해도 퀴즈</button>
+    </div>
+  </div>
+
+  <!-- Story Complete Screen -->
+  <div class="screen" id="tab-manga-complete">
+    <div class="story-complete">
+      <div class="story-complete-icon" id="completeIcon">🎉</div>
+      <h2 id="completeTitle">이야기 완료!</h2>
+      <p id="completeMsg"></p>
+      <button class="story-complete-btn" id="goQuizBtn">📝 퀴즈 도전</button>
+      <button class="story-complete-btn" style="background:var(--card);color:var(--text)" id="goListBtn">목록으로</button>
+    </div>
+  </div>
+
+  <!-- Quiz Screen -->
+  <div class="screen" id="tab-manga-quiz">
+    <div class="quiz-header">
+      <h2 id="quizTitle">이해도 퀴즈</h2>
+      <div class="quiz-progress" id="quizProgress"></div>
+    </div>
+    <div class="quiz-question" id="quizQuestion"></div>
+    <div class="quiz-choices" id="quizChoices"></div>
+  </div>
+
+  <!-- Quiz Result Screen -->
+  <div class="screen" id="tab-manga-quizresult">
+    <div class="quiz-result">
+      <div class="quiz-result-score" id="quizScore">0%</div>
+      <div class="quiz-result-label">정답률</div>
+      <div class="quiz-result-detail" id="quizDetail"></div>
+      <button class="quiz-result-btn" id="quizDoneBtn">확인</button>
+    </div>
+  </div>
+</div>
+
+<!-- Tab: Vocab -->
+<div class="tab-content" id="tab-vocab">
+  <div style="padding:16px 16px 8px">
+    <h2 style="font-size:1rem;margin-bottom:4px">단어장</h2>
+    <p style="font-size:.75rem;color:var(--muted)">만화에서 저장한 단어들</p>
+  </div>
+  <div class="vocab-filter" id="vocabFilter"></div>
+  <div class="vocab-list" id="vocabList"></div>
+  <button class="vocab-quiz-btn" id="vocabQuizBtn" style="display:none">단어 퀴즈</button>
+</div>
+
+<!-- Tab: My -->
+<div class="tab-content" id="tab-my">
+  <div class="my-section">
+    <h3>학습 현황</h3>
+    <div class="stats-grid">
+      <div class="stat-card"><div class="stat-val" id="statStories">0/5</div><div class="stat-label">읽은 이야기</div></div>
+      <div class="stat-card"><div class="stat-val" id="statWords">0</div><div class="stat-label">저장 단어</div></div>
+      <div class="stat-card"><div class="stat-val" id="statAccuracy">-%</div><div class="stat-label">퀴즈 정답률</div></div>
+    </div>
+
+    <h3>이야기 진행</h3>
+    <div class="progress-grid" id="progressGrid"></div>
+
+    <h3>설정</h3>
+    <div class="setting-row">
+      <div><div class="setting-label">후리가나 표시</div><div class="setting-desc">한자 위에 읽기 표시</div></div>
+      <button class="toggle-switch on" id="setFurigana"></button>
+    </div>
+    <div class="setting-row">
+      <div><div class="setting-label">한국어 번역 기본 표시</div><div class="setting-desc">각 패널 아래 번역 표시</div></div>
+      <button class="toggle-switch" id="setKorean"></button>
+    </div>
+    <div class="setting-row">
+      <div><div class="setting-label">TTS 속도</div></div>
+      <select class="setting-select" id="setTTSRate">
+        <option value="0.6">느리게</option>
+        <option value="0.8" selected>보통</option>
+        <option value="1.0">빠르게</option>
+      </select>
+    </div>
+
+    <h3 style="margin-top:24px">데이터</h3>
+    <div class="backup-btns">
+      <button id="btnExport">백업 내보내기</button>
+      <button id="btnImport">백업 가져오기</button>
+    </div>
+    <button class="danger-btn" id="btnReset">데이터 초기화</button>
+    <input type="file" id="importFile" style="display:none" accept=".json">
+  </div>
+</div>
+
+<!-- Vocab Popup -->
+<div class="vocab-popup" id="vocabPopup">
+  <div class="vocab-popup-word" id="popupWord"></div>
+  <div class="vocab-popup-reading" id="popupReading"></div>
+  <div class="vocab-popup-meaning" id="popupMeaning"></div>
+  <div class="vocab-popup-btns">
+    <button class="btn-save" id="popupSave">📝 단어장에 저장</button>
+    <button class="btn-close" id="popupClose">닫기</button>
+  </div>
+</div>
+
+<!-- Tab Bar -->
+<nav class="tab-bar">
+  <button class="tab-btn active" data-tab="manga"><span class="tab-icon">📖</span>만화</button>
+  <button class="tab-btn" data-tab="vocab"><span class="tab-icon">📝</span>단어장</button>
+  <button class="tab-btn" data-tab="my"><span class="tab-icon">👤</span>마이</button>
+</nav>
+
+<script type="module">
+import { STORIES } from "./data/stories.js";
+import { getState, saveState, updateState, addXP, xpForLevel, checkStreak, recordActivity,
+         getStoryProgress, updateStoryProgress, saveWord, getSavedWords, removeWord,
+         recordQuizResult, exportData, importData, resetData } from "./modules/state.js";
+import { speakJapanese, stopSpeaking } from "./modules/tts.js";
+import { $, qs, qsa, switchTab, showScreen, showToast, confetti, shuffleArray } from "./modules/ui.js";
+
+// ===================== INIT =====================
+let currentStory = null;
+let currentQuiz = null;
+let quizIndex = 0;
+let quizCorrect = 0;
+let popupVocab = null;
+let popupSentence = "";
+let playingAll = false;
+
+function init() {
+  renderHeader();
+  renderStoryList();
+  renderVocabTab();
+  renderMyPage();
+  setupEvents();
+  updateSettingsUI();
+}
+
+// ===================== HEADER =====================
+function renderHeader() {
+  const s = getState();
+  $("headerStreak").textContent = `🔥 ${s.streak.current}`;
+  $("headerLv").textContent = `Lv.${s.playerLevel}`;
+  const needed = xpForLevel(s.playerLevel);
+  $("xpFill").style.width = `${(s.levelXP / needed * 100).toFixed(1)}%`;
+  $("xpText").textContent = `${s.levelXP} / ${needed} XP`;
+}
+
+// ===================== STORY LIST =====================
+function renderStoryList() {
+  const el = $("storyList");
+  el.innerHTML = STORIES.map(story => {
+    const prog = getStoryProgress(story.id);
+    const totalPanels = story.panels.length;
+    const readPanels = prog.currentPanel || 0;
+    const pct = prog.completed ? 100 : Math.round(readPanels / totalPanels * 100);
+    const cls = prog.completed ? "completed" : readPanels > 0 ? "reading" : "";
+    return `<div class="story-card ${cls}" data-id="${story.id}">
+      <div class="story-icon">${story.icon}</div>
+      <div class="story-info">
+        <div class="story-title-jp">${story.title}</div>
+        <div class="story-title-kr">${story.titleKr}</div>
+        <div class="story-progress"><div class="story-progress-fill" style="width:${pct}%"></div></div>
+        ${prog.completed ? `<div class="story-badge">✅ 완료${prog.quizScore >= 0 ? ` · 퀴즈 ${prog.quizScore}%` : ""}</div>` : ""}
+      </div>
+    </div>`;
+  }).join("");
+
+  el.querySelectorAll(".story-card").forEach(card => {
+    card.addEventListener("click", () => openStory(card.dataset.id));
+  });
+}
+
+// ===================== MANGA READER =====================
+function openStory(storyId) {
+  currentStory = STORIES.find(s => s.id === storyId);
+  if (!currentStory) return;
+  $("mangaTitle").textContent = `${currentStory.title} ${currentStory.titleKr}`;
+  renderPanels();
+  showScreen("tab-manga", "reader");
+  recordActivity();
+}
+
+function renderPanels() {
+  const s = getState();
+  const showFuri = s.showFurigana;
+  const showKr = s.showKorean;
+  const panels = currentStory.panels;
+  const container = $("mangaPanels");
+
+  container.innerHTML = panels.map((p, idx) => {
+    const jpHtml = buildJpHtml(p);
+    return `<div class="panel ${showFuri ? "" : "hide-furigana"}" data-idx="${idx}">
+      <div class="panel-scene scene-${p.scene}">
+        <div class="panel-illust">${p.illustration}</div>
+        ${p.sfx ? `<div class="panel-sfx">${p.sfx}</div>` : ""}
+      </div>
+      <div class="panel-body">
+        <div class="panel-jp">${jpHtml}</div>
+        <div class="panel-kr ${showKr ? "show" : ""}">${p.kr}</div>
+        ${p.grammar ? `<div class="panel-grammar">📌 ${p.grammar}</div>` : ""}
+        <div class="panel-controls">
+          <button class="panel-tts" data-idx="${idx}">🔊</button>
+          <button class="panel-kr-toggle ${showKr ? "active" : ""}" data-idx="${idx}">한</button>
+          <span class="panel-num">${idx + 1}/${panels.length}</span>
+        </div>
+      </div>
+    </div>`;
+  }).join("");
+
+  // Update progress
+  updateStoryProgress(currentStory.id, { currentPanel: panels.length });
+
+  // Show quiz button
+  $("startQuizBtn").style.display = currentStory.quiz && currentStory.quiz.length > 0 ? "inline-block" : "none";
+  $("scrollHint").style.display = panels.length > 2 ? "block" : "none";
+
+  // Panel events
+  container.querySelectorAll(".panel-tts").forEach(btn => {
+    btn.addEventListener("click", () => {
+      const p = currentStory.panels[parseInt(btn.dataset.idx)];
+      speakJapanese(p.reading || p.jp, getState().ttsRate);
+    });
+  });
+
+  container.querySelectorAll(".panel-kr-toggle").forEach(btn => {
+    btn.addEventListener("click", () => {
+      const panel = container.querySelectorAll(".panel")[parseInt(btn.dataset.idx)];
+      const kr = panel.querySelector(".panel-kr");
+      kr.classList.toggle("show");
+      btn.classList.toggle("active", kr.classList.contains("show"));
+    });
+  });
+
+  container.querySelectorAll(".vocab-word").forEach(el => {
+    el.addEventListener("click", () => {
+      const idx = parseInt(el.dataset.panel);
+      const vidx = parseInt(el.dataset.vidx);
+      const p = currentStory.panels[idx];
+      const v = p.vocab[vidx];
+      if (v) showVocabPopup(v, p.jp);
+    });
+  });
+
+  // Check if story fully read
+  setTimeout(() => {
+    const prog = getStoryProgress(currentStory.id);
+    if (!prog.completed) {
+      updateStoryProgress(currentStory.id, { completed: true });
+      addXP(20);
+      renderHeader();
+      showToast("이야기 읽기 완료! +20 XP", "success");
+    }
+  }, 2000);
+}
+
+function buildJpHtml(panel) {
+  let text = panel.jp;
+  if (!panel.vocab || panel.vocab.length === 0) return escHtml(text);
+
+  // Sort vocab by word length (longest first) to avoid partial matches
+  const sorted = [...panel.vocab].sort((a, b) => b.word.length - a.word.length);
+  const markers = [];
+
+  sorted.forEach((v, origIdx) => {
+    const vidx = panel.vocab.indexOf(v);
+    // Find word in text (try kanji form first, then word)
+    const searchWord = v.word;
+    const pos = text.indexOf(searchWord);
+    if (pos >= 0) {
+      // Check not already marked
+      const overlap = markers.some(m => (pos >= m.start && pos < m.end) || (pos + searchWord.length > m.start && pos + searchWord.length <= m.end));
+      if (!overlap) {
+        markers.push({ start: pos, end: pos + searchWord.length, vidx, vocab: v });
+      }
+    }
+  });
+
+  if (markers.length === 0) return addRuby(text, panel);
+
+  // Sort markers by position
+  markers.sort((a, b) => a.start - b.start);
+
+  let html = "";
+  let last = 0;
+  const panelIdx = panel.id - 1;
+
+  markers.forEach(m => {
+    if (m.start > last) html += escHtml(text.slice(last, m.start));
+    const word = text.slice(m.start, m.end);
+    if (m.vocab.reading && m.vocab.reading !== word) {
+      html += `<span class="vocab-word" data-panel="${panelIdx}" data-vidx="${m.vidx}"><ruby>${escHtml(word)}<rt>${escHtml(m.vocab.reading)}</rt></ruby></span>`;
+    } else {
+      html += `<span class="vocab-word" data-panel="${panelIdx}" data-vidx="${m.vidx}">${escHtml(word)}</span>`;
+    }
+    last = m.end;
+  });
+  if (last < text.length) html += escHtml(text.slice(last));
+  return html;
+}
+
+function addRuby(text, panel) {
+  // Simple passthrough with no ruby
+  return escHtml(text);
+}
+
+function escHtml(s) {
+  return s.replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");
+}
+
+// ===================== VOCAB POPUP =====================
+function showVocabPopup(vocab, sentence) {
+  popupVocab = vocab;
+  popupSentence = sentence;
+  $("popupWord").textContent = vocab.word;
+  $("popupReading").textContent = vocab.reading || "";
+  $("popupMeaning").textContent = vocab.meaning;
+  $("vocabPopup").classList.add("show");
+}
+
+function hideVocabPopup() {
+  $("vocabPopup").classList.remove("show");
+  popupVocab = null;
+}
+
+// ===================== QUIZ =====================
+function startQuiz() {
+  if (!currentStory || !currentStory.quiz || currentStory.quiz.length === 0) return;
+  currentQuiz = currentStory.quiz;
+  quizIndex = 0;
+  quizCorrect = 0;
+  $("quizTitle").textContent = `${currentStory.title} 이해도 퀴즈`;
+  showScreen("tab-manga", "quiz");
+  renderQuizQuestion();
+}
+
+function renderQuizQuestion() {
+  if (quizIndex >= currentQuiz.length) {
+    showQuizResult();
+    return;
+  }
+  const q = currentQuiz[quizIndex];
+  // Progress dots
+  $("quizProgress").innerHTML = currentQuiz.map((_, i) =>
+    `<div class="quiz-dot ${i < quizIndex ? (i === quizIndex ? "current" : "correct") : i === quizIndex ? "current" : ""}"></div>`
+  ).join("");
+
+  $("quizQuestion").innerHTML = `<div>${q.q}</div>${q.kr ? `<div class="quiz-question-kr">${q.kr}</div>` : ""}`;
+
+  const choicesEl = $("quizChoices");
+  choicesEl.innerHTML = q.choices.map((c, i) =>
+    `<button class="quiz-choice" data-idx="${i}">${c}</button>`
+  ).join("");
+
+  choicesEl.querySelectorAll(".quiz-choice").forEach(btn => {
+    btn.addEventListener("click", () => handleQuizAnswer(parseInt(btn.dataset.idx)));
+  });
+}
+
+function handleQuizAnswer(idx) {
+  const q = currentQuiz[quizIndex];
+  const buttons = qsa(".quiz-choice");
+  buttons.forEach(b => b.disabled = true);
+
+  const isCorrect = idx === q.answer;
+  buttons[idx].classList.add(isCorrect ? "correct" : "wrong");
+  if (!isCorrect) buttons[q.answer].classList.add("correct");
+
+  if (isCorrect) {
+    quizCorrect++;
+    confetti();
+    showToast("정답! 🎉", "success");
+    addXP(10);
+  } else {
+    showToast("아쉬워요!", "error");
+  }
+  renderHeader();
+
+  setTimeout(() => {
+    quizIndex++;
+    renderQuizQuestion();
+  }, 1200);
+}
+
+function showQuizResult() {
+  const total = currentQuiz.length;
+  const pct = Math.round(quizCorrect / total * 100);
+  $("quizScore").textContent = `${pct}%`;
+  $("quizDetail").textContent = `${total}문제 중 ${quizCorrect}개 정답`;
+
+  if (pct >= 80) confetti();
+  recordQuizResult(quizCorrect, total);
+  updateStoryProgress(currentStory.id, { quizScore: pct });
+  renderHeader();
+  showScreen("tab-manga", "quizresult");
+}
+
+// ===================== PLAY ALL =====================
+function playAllPanels() {
+  if (playingAll) {
+    stopSpeaking();
+    playingAll = false;
+    $("playAllBtn").textContent = "▶ 전체";
+    return;
+  }
+  if (!currentStory) return;
+  playingAll = true;
+  $("playAllBtn").textContent = "⏹ 정지";
+
+  const panels = currentStory.panels;
+  let i = 0;
+
+  function playNext() {
+    if (i >= panels.length || !playingAll) {
+      playingAll = false;
+      $("playAllBtn").textContent = "▶ 전체";
+      return;
+    }
+    const p = panels[i];
+    // Scroll to panel
+    const panelEl = qsa(".panel")[i];
+    if (panelEl) panelEl.scrollIntoView({ behavior: "smooth", block: "center" });
+
+    i++;
+    speakJapanese(p.reading || p.jp, getState().ttsRate, () => {
+      setTimeout(playNext, 500);
+    });
+  }
+  playNext();
+}
+
+// ===================== VOCAB TAB =====================
+function renderVocabTab() {
+  const words = getSavedWords();
+  const list = $("vocabList");
+
+  if (words.length === 0) {
+    list.innerHTML = `<div class="vocab-empty">만화를 읽으며 모르는 단어를 탭하면<br>단어장에 저장됩니다 📚</div>`;
+    $("vocabQuizBtn").style.display = "none";
+    return;
+  }
+
+  // Group by story
+  const byStory = {};
+  words.forEach(w => {
+    const sid = w.storyId || "기타";
+    if (!byStory[sid]) byStory[sid] = [];
+    byStory[sid].push(w);
+  });
+
+  // Filter buttons
+  const storyIds = Object.keys(byStory);
+  const filterEl = $("vocabFilter");
+  filterEl.innerHTML = `<button class="active" data-filter="all">전체 (${words.length})</button>` +
+    storyIds.map(sid => {
+      const story = STORIES.find(s => s.id === sid);
+      const label = story ? `${story.icon} ${story.title}` : sid;
+      return `<button data-filter="${sid}">${label} (${byStory[sid].length})</button>`;
+    }).join("");
+
+  renderVocabList(words);
+
+  filterEl.querySelectorAll("button").forEach(btn => {
+    btn.addEventListener("click", () => {
+      filterEl.querySelectorAll("button").forEach(b => b.classList.remove("active"));
+      btn.classList.add("active");
+      const f = btn.dataset.filter;
+      renderVocabList(f === "all" ? words : byStory[f] || []);
+    });
+  });
+
+  $("vocabQuizBtn").style.display = words.length >= 4 ? "block" : "none";
+}
+
+function renderVocabList(words) {
+  const list = $("vocabList");
+  if (words.length === 0) {
+    list.innerHTML = `<div class="vocab-empty">단어가 없습니다</div>`;
+    return;
+  }
+  list.innerHTML = words.map(w => `<div class="vocab-item">
+    <div>
+      <div class="vocab-item-word">${w.word}</div>
+      ${w.reading ? `<div class="vocab-item-reading">${w.reading}</div>` : ""}
+    </div>
+    <div class="vocab-item-meaning">${w.meaning}</div>
+    <button class="vocab-item-del" data-word="${w.word}">✕</button>
+  </div>`).join("");
+
+  list.querySelectorAll(".vocab-item-del").forEach(btn => {
+    btn.addEventListener("click", () => {
+      removeWord(btn.dataset.word);
+      renderVocabTab();
+      showToast("삭제됨", "info");
+    });
+  });
+}
+
+// ===================== VOCAB QUIZ =====================
+let vocabQuiz = null;
+let vocabQuizIdx = 0;
+let vocabQuizCorrect = 0;
+
+function startVocabQuiz() {
+  const words = getSavedWords();
+  if (words.length < 4) { showToast("단어 4개 이상 필요", "error"); return; }
+
+  const shuffled = shuffleArray(words).slice(0, 10);
+  vocabQuiz = shuffled.map(w => {
+    const wrong = shuffleArray(words.filter(x => x.word !== w.word)).slice(0, 3).map(x => x.meaning);
+    const choices = shuffleArray([w.meaning, ...wrong]);
+    return { word: w.word, reading: w.reading, answer: choices.indexOf(w.meaning), choices };
+  });
+  vocabQuizIdx = 0;
+  vocabQuizCorrect = 0;
+  showScreen("tab-manga", "quiz");
+  $("quizTitle").textContent = "단어 퀴즈";
+  currentQuiz = vocabQuiz.map(q => ({
+    q: `「${q.word}」${q.reading ? ` (${q.reading})` : ""} 의 뜻은?`,
+    choices: q.choices,
+    answer: q.answer
+  }));
+  quizIndex = 0;
+  quizCorrect = 0;
+  renderQuizQuestion();
+}
+
+// ===================== MY PAGE =====================
+function renderMyPage() {
+  const s = getState();
+  const words = getSavedWords();
+  const completed = STORIES.filter(st => getStoryProgress(st.id).completed).length;
+
+  $("statStories").textContent = `${completed}/${STORIES.length}`;
+  $("statWords").textContent = words.length;
+  $("statAccuracy").textContent = s.totalQuizzes > 0
+    ? `${Math.round(s.totalCorrect / s.totalQuizzes * 100)}%` : "-%";
+
+  // Progress grid
+  $("progressGrid").innerHTML = STORIES.map(st => {
+    const prog = getStoryProgress(st.id);
+    return `<div class="progress-story ${prog.completed ? "completed" : ""}">
+      ${st.icon}
+      <div class="progress-story-title">${st.title}</div>
+    </div>`;
+  }).join("");
+}
+
+// ===================== SETTINGS =====================
+function updateSettingsUI() {
+  const s = getState();
+  $("setFurigana").classList.toggle("on", s.showFurigana);
+  $("setKorean").classList.toggle("on", s.showKorean);
+  $("setTTSRate").value = String(s.ttsRate);
+  $("toggleFuri").classList.toggle("active", s.showFurigana);
+  $("toggleKr").classList.toggle("active", s.showKorean);
+}
+
+// ===================== EVENTS =====================
+function setupEvents() {
+  // Tab bar
+  qsa(".tab-btn").forEach(btn => {
+    btn.addEventListener("click", () => {
+      switchTab(btn.dataset.tab);
+      if (btn.dataset.tab === "vocab") renderVocabTab();
+      if (btn.dataset.tab === "my") renderMyPage();
+    });
+  });
+
+  // Manga back
+  $("mangaBack").addEventListener("click", () => {
+    stopSpeaking();
+    playingAll = false;
+    $("playAllBtn").textContent = "▶ 전체";
+    showScreen("tab-manga", "list");
+    renderStoryList();
+  });
+
+  // Toggle furigana
+  $("toggleFuri").addEventListener("click", () => {
+    const s = getState();
+    updateState({ showFurigana: !s.showFurigana });
+    qsa(".panel").forEach(p => p.classList.toggle("hide-furigana", !getState().showFurigana));
+    $("toggleFuri").classList.toggle("active", getState().showFurigana);
+  });
+
+  // Toggle korean
+  $("toggleKr").addEventListener("click", () => {
+    const s = getState();
+    updateState({ showKorean: !s.showKorean });
+    qsa(".panel-kr").forEach(k => k.classList.toggle("show", getState().showKorean));
+    qsa(".panel-kr-toggle").forEach(b => b.classList.toggle("active", getState().showKorean));
+    $("toggleKr").classList.toggle("active", getState().showKorean);
+  });
+
+  // Play all
+  $("playAllBtn").addEventListener("click", playAllPanels);
+
+  // Start quiz
+  $("startQuizBtn").addEventListener("click", startQuiz);
+  $("goQuizBtn").addEventListener("click", startQuiz);
+  $("goListBtn").addEventListener("click", () => {
+    showScreen("tab-manga", "list");
+    renderStoryList();
+  });
+
+  // Quiz done
+  $("quizDoneBtn").addEventListener("click", () => {
+    showScreen("tab-manga", "list");
+    renderStoryList();
+    renderMyPage();
+  });
+
+  // Vocab popup
+  $("popupSave").addEventListener("click", () => {
+    if (popupVocab && currentStory) {
+      saveWord(popupVocab, currentStory.id, popupSentence);
+      showToast("단어장에 저장! 📝", "success");
+      hideVocabPopup();
+    }
+  });
+  $("popupClose").addEventListener("click", hideVocabPopup);
+
+  // Vocab quiz
+  $("vocabQuizBtn").addEventListener("click", startVocabQuiz);
+
+  // Settings
+  $("setFurigana").addEventListener("click", () => {
+    const s = getState();
+    updateState({ showFurigana: !s.showFurigana });
+    $("setFurigana").classList.toggle("on", getState().showFurigana);
+  });
+  $("setKorean").addEventListener("click", () => {
+    const s = getState();
+    updateState({ showKorean: !s.showKorean });
+    $("setKorean").classList.toggle("on", getState().showKorean);
+  });
+  $("setTTSRate").addEventListener("change", () => {
+    updateState({ ttsRate: parseFloat($("setTTSRate").value) });
+  });
+
+  // Backup
+  $("btnExport").addEventListener("click", () => {
+    const blob = new Blob([exportData()], { type: "application/json" });
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(blob);
+    a.download = "manga-n5-backup.json";
+    a.click();
+  });
+  $("btnImport").addEventListener("click", () => $("importFile").click());
+  $("importFile").addEventListener("change", e => {
+    const file = e.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = () => {
+      if (importData(reader.result)) {
+        showToast("복원 완료!", "success");
+        renderHeader();
+        renderStoryList();
+        renderVocabTab();
+        renderMyPage();
+        updateSettingsUI();
+      } else {
+        showToast("복원 실패", "error");
+      }
+    };
+    reader.readAsText(file);
+  });
+  $("btnReset").addEventListener("click", () => {
+    if (confirm("모든 데이터가 삭제됩니다. 계속하시겠습니까?")) {
+      resetData();
+      showToast("초기화 완료", "info");
+      renderHeader();
+      renderStoryList();
+      renderVocabTab();
+      renderMyPage();
+    }
+  });
+}
+
+// ===================== PWA =====================
+if ("serviceWorker" in navigator) {
+  navigator.serviceWorker.register("sw.js").catch(() => {});
+}
+
+init();
+</script>
+</body>
+</html>

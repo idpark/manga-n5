@@ -1,0 +1,5 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512">
+<rect width="512" height="512" rx="64" fill="#0f172a"/>
+<text x="96" y="290" text-anchor="middle" font-size="200">📖</text>
+<text x="96" y="400" text-anchor="middle" font-size="56" fill="#f59e0b" font-weight="bold" font-family="sans-serif">N5</text>
+</svg>
