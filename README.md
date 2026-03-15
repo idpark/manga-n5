@@ -52,6 +52,11 @@ GEMINI_API_KEY="your-key" python3 generate-images.py
 - [nihongo-n5](https://github.com/idpark/nihongo-n5) — N5 일본어 마스터 (대화, 단어, 문법)
 - [kana-master](https://github.com/idpark/kana-master) — 히라가나/가타카나 암기장
 
+## Contributors
+
+- [@idpark](https://github.com/idpark) — 기획, 개발
+- Claude Code (Anthropic) — AI 페어 프로그래밍
+
 ## 라이선스
 
 MIT
