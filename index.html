@@ -176,7 +176,7 @@ a{color:var(--blue);text-decoration:none}
 .vocab-item-word{font-size:1.1rem;font-weight:600;min-width:80px}
 .vocab-item-reading{font-size:.8rem;color:var(--gold)}
 .vocab-item-meaning{font-size:.85rem;color:var(--muted);flex:1}
-.vocab-item-del{background:none;border:none;color:var(--red);font-size:1rem;cursor:pointer;padding:4px 8px}
+.vocab-item-tts{background:none;border:none;color:var(--blue);font-size:1.1rem;cursor:pointer;padding:4px 8px}
 .n5-badge{display:inline-block;background:var(--red);color:white;font-size:.55rem;font-weight:700;
   padding:1px 5px;border-radius:4px;margin-left:6px;vertical-align:middle;letter-spacing:.5px}
 .vocab-empty{text-align:center;padding:60px 24px;color:var(--muted);font-size:.9rem}
@@ -797,15 +797,13 @@ function renderVocabList(words) {
       ${w.reading ? `<div class="vocab-item-reading">${w.reading}</div>` : ""}
     </div>
     <div class="vocab-item-meaning">${w.meaning}</div>
-    <button class="vocab-item-del" data-word="${w.word}">✕</button>
+    <button class="vocab-item-tts" data-word="${w.reading || w.word}">🔊</button>
   </div>`;
   }).join("");
 
-  list.querySelectorAll(".vocab-item-del").forEach(btn => {
+  list.querySelectorAll(".vocab-item-tts").forEach(btn => {
     btn.addEventListener("click", () => {
-      removeWord(btn.dataset.word);
-      renderVocabTab();
-      showToast("삭제됨", "info");
+      speakJapanese(btn.dataset.word);
     });
   });
 }
