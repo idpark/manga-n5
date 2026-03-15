@@ -91,6 +91,10 @@ a{color:var(--blue);text-decoration:none}
 
 .panel-illust{font-size:3rem;letter-spacing:8px;text-shadow:0 2px 8px rgba(0,0,0,.3);
   animation:float 3s ease-in-out infinite}
+.panel-illust.has-img{font-size:0;letter-spacing:0;animation:none}
+.panel-img{width:100%;max-height:320px;object-fit:contain;border-radius:8px;
+  animation:fadeIn .5s ease}
+@keyframes fadeIn{from{opacity:0}to{opacity:1}}
 @keyframes float{0%,100%{transform:translateY(0)}50%{transform:translateY(-6px)}}
 
 .panel-sfx{font-size:1.4rem;font-weight:900;color:#fff;text-shadow:2px 2px 0 rgba(0,0,0,.5),
@@ -493,7 +497,9 @@ function renderPanels() {
     const jpHtml = buildJpHtml(p);
     return `<div class="panel ${showFuri ? "" : "hide-furigana"}" data-idx="${idx}">
       <div class="panel-scene scene-${p.scene}">
-        <div class="panel-illust">${p.illustration}</div>
+        <div class="panel-illust${p.image ? ' has-img' : ''}">${p.image
+          ? `<img class="panel-img" src="${p.image}" alt="" loading="lazy" onerror="this.style.display='none';this.parentElement.classList.remove('has-img');this.parentElement.textContent='${p.illustration}'">`
+          : p.illustration}</div>
         ${p.sfx ? `<div class="panel-sfx">${p.sfx}</div>` : ""}
       </div>
       <div class="panel-body">
