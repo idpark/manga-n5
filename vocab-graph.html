@@ -1,0 +1,1359 @@
+<!DOCTYPE html>
+<html lang="ja" translate="no" class="notranslate">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="google" content="notranslate">
+<title>Vocab Graph - manga N5</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:#0f172a;overflow:hidden;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','Hiragino Sans',sans-serif}
+canvas{display:block}
+#tooltip{
+  position:fixed;pointer-events:none;opacity:0;transition:opacity .15s;
+  background:rgba(15,23,42,.95);border:1px solid rgba(124,58,237,.6);
+  border-radius:10px;padding:10px 14px;color:#f1f5f9;font-size:13px;
+  backdrop-filter:blur(8px);box-shadow:0 4px 24px rgba(0,0,0,.5);
+  max-width:220px;z-index:10;
+}
+#tooltip .tt-word{font-size:18px;font-weight:700;color:#f59e0b}
+#tooltip .tt-romaji{font-size:12px;color:#a78bfa;margin-top:2px;font-style:italic}
+#tooltip .tt-reading{font-size:13px;color:#94a3b8;margin-top:2px}
+#tooltip .tt-meaning{font-size:12px;color:#cbd5e1;margin-top:4px}
+#tooltip .tt-cat{font-size:11px;color:#7c3aed;margin-top:4px;font-weight:600}
+#legend{
+  position:fixed;bottom:16px;left:16px;background:rgba(15,23,42,.85);
+  border:1px solid #334155;border-radius:12px;padding:12px 16px;
+  color:#94a3b8;font-size:11px;backdrop-filter:blur(8px);z-index:5;
+}
+#legend h4{color:#f1f5f9;font-size:12px;margin-bottom:6px}
+.leg-row{display:flex;align-items:center;gap:8px;margin:3px 0}
+.leg-dot{width:10px;height:10px;border-radius:50%;flex-shrink:0}
+#title-bar{
+  position:fixed;top:0;left:0;right:0;padding:14px 20px;
+  background:linear-gradient(180deg,rgba(15,23,42,.95),rgba(15,23,42,0));
+  z-index:5;display:flex;justify-content:space-between;align-items:center;
+}
+#title-bar h1{
+  font-size:16px;font-weight:700;
+  background:linear-gradient(135deg,#f59e0b,#f97316);-webkit-background-clip:text;-webkit-text-fill-color:transparent;
+}
+#title-bar .sub{color:#64748b;font-size:12px}
+#btn-reset{
+  background:rgba(124,58,237,.2);border:1px solid rgba(124,58,237,.4);
+  color:#c4b5fd;border-radius:8px;padding:6px 12px;font-size:11px;cursor:pointer;
+}
+#btn-reset:hover{background:rgba(124,58,237,.35)}
+#btn-quiz{
+  background:rgba(245,158,11,.2);border:1px solid rgba(245,158,11,.4);
+  color:#fcd34d;border-radius:8px;padding:6px 12px;font-size:11px;cursor:pointer;
+  margin-right:8px;
+}
+#btn-quiz:hover{background:rgba(245,158,11,.35)}
+
+/* Quiz Modal */
+#quiz-overlay{
+  position:fixed;inset:0;z-index:100;display:none;
+  background:rgba(0,0,0,.7);backdrop-filter:blur(6px);
+  justify-content:center;align-items:center;
+  opacity:0;transition:opacity .3s ease;
+}
+#quiz-overlay.active{display:flex;opacity:1}
+#quiz-modal{
+  background:rgba(15,23,42,.97);border:1px solid rgba(124,58,237,.5);
+  border-radius:16px;padding:28px 32px;color:#f1f5f9;
+  max-width:440px;width:90%;box-shadow:0 8px 40px rgba(0,0,0,.6);
+  transform:scale(.95);transition:transform .3s ease;
+}
+#quiz-overlay.active #quiz-modal{transform:scale(1)}
+.quiz-title{font-size:18px;font-weight:700;margin-bottom:16px;
+  background:linear-gradient(135deg,#f59e0b,#f97316);-webkit-background-clip:text;-webkit-text-fill-color:transparent;}
+.quiz-subtitle{font-size:12px;color:#94a3b8;margin-bottom:20px}
+.quiz-word{font-size:32px;font-weight:700;text-align:center;margin:16px 0 4px;color:#f59e0b}
+.quiz-romaji-display{font-size:14px;text-align:center;color:#a78bfa;font-style:italic;margin-bottom:12px}
+.quiz-prompt{font-size:13px;color:#94a3b8;text-align:center;margin-bottom:16px}
+.quiz-choices{display:flex;flex-direction:column;gap:8px;margin-bottom:16px}
+.quiz-choice{
+  background:rgba(51,65,85,.4);border:1px solid rgba(100,116,139,.3);
+  border-radius:10px;padding:10px 16px;color:#e2e8f0;font-size:14px;
+  cursor:pointer;transition:all .2s ease;text-align:left;
+}
+.quiz-choice:hover{background:rgba(100,116,139,.3);border-color:rgba(124,58,237,.5)}
+.quiz-choice.correct{background:rgba(16,185,129,.25);border-color:#10b981;color:#6ee7b7}
+.quiz-choice.wrong{background:rgba(239,68,68,.2);border-color:#ef4444;color:#fca5a5}
+.quiz-choice.reveal{border-color:#10b981;color:#6ee7b7}
+.quiz-score{font-size:13px;color:#94a3b8;text-align:right;margin-bottom:8px}
+.quiz-progress-bar{width:100%;height:6px;background:rgba(51,65,85,.5);border-radius:3px;margin-bottom:16px;overflow:hidden}
+.quiz-progress-fill{height:100%;background:linear-gradient(90deg,#f59e0b,#f97316);border-radius:3px;transition:width .4s ease}
+.quiz-type-label{font-size:13px;color:#a78bfa;margin-bottom:12px;font-weight:600;letter-spacing:.5px}
+.quiz-sentence{font-size:20px;text-align:center;margin:16px 0;color:#f1f5f9;line-height:1.6;letter-spacing:1px}
+.quiz-sentence .blank{color:#f59e0b;font-weight:700;border-bottom:2px dashed #f59e0b;padding:0 4px}
+.quiz-explanation{font-size:12px;color:#94a3b8;margin-top:8px;text-align:center;font-style:italic;line-height:1.5}
+.quiz-start-btn{
+  display:block;width:100%;background:linear-gradient(135deg,rgba(245,158,11,.4),rgba(249,115,22,.4));
+  border:1px solid rgba(245,158,11,.5);color:#fcd34d;border-radius:12px;
+  padding:14px;font-size:16px;font-weight:700;cursor:pointer;transition:all .3s ease;
+  margin-top:20px;letter-spacing:1px;
+}
+.quiz-start-btn:hover{background:linear-gradient(135deg,rgba(245,158,11,.6),rgba(249,115,22,.6));transform:scale(1.02)}
+.quiz-choice{transition:all .25s ease;transform:scale(1)}
+.quiz-choice:active{transform:scale(.97)}
+.quiz-choice.correct{animation:correctPulse .5s ease}
+.quiz-choice.wrong{animation:wrongShake .4s ease}
+@keyframes correctPulse{0%{transform:scale(1)}50%{transform:scale(1.03)}100%{transform:scale(1)}}
+@keyframes wrongShake{0%{transform:translateX(0)}25%{transform:translateX(-6px)}50%{transform:translateX(6px)}75%{transform:translateX(-4px)}100%{transform:translateX(0)}}
+.quiz-close{
+  position:absolute;top:12px;right:16px;background:none;border:none;
+  color:#64748b;font-size:20px;cursor:pointer;transition:color .2s;
+}
+.quiz-close:hover{color:#f1f5f9}
+#kr-toggle{
+  position:absolute;top:12px;left:16px;width:36px;height:36px;border-radius:10px;
+  background:rgba(100,116,139,.3);border:1px solid rgba(100,116,139,.4);
+  color:#94a3b8;font-size:15px;font-weight:800;cursor:pointer;
+  display:flex;align-items:center;justify-content:center;transition:all .25s ease;
+  font-family:-apple-system,sans-serif;
+}
+#kr-toggle:hover{background:rgba(100,116,139,.5)}
+#kr-toggle.active{background:rgba(59,130,246,.5);border-color:rgba(59,130,246,.7);color:#fff;box-shadow:0 0 12px rgba(59,130,246,.4)}
+.kr-sub{display:none;font-size:11px;color:#60a5fa;margin-top:2px;font-style:italic}
+.kr-mode .kr-sub{display:block}
+.quiz-choice .kr-sub{margin-top:1px;font-size:10px}
+.quiz-btn{
+  background:rgba(124,58,237,.3);border:1px solid rgba(124,58,237,.4);
+  color:#c4b5fd;border-radius:8px;padding:8px 20px;font-size:12px;cursor:pointer;
+  transition:all .2s ease;
+}
+.quiz-btn:hover{background:rgba(124,58,237,.5)}
+.quiz-btn.primary{background:rgba(245,158,11,.3);border-color:rgba(245,158,11,.4);color:#fcd34d}
+.quiz-btn.primary:hover{background:rgba(245,158,11,.5)}
+.quiz-footer{display:flex;justify-content:space-between;align-items:center;margin-top:16px}
+.quiz-result{text-align:center;padding:20px 0}
+.quiz-result-score{font-size:36px;font-weight:700;color:#f59e0b;margin:8px 0}
+.quiz-result-label{font-size:14px;color:#94a3b8}
+.quiz-result-msg{font-size:16px;color:#e2e8f0;margin-top:12px;font-weight:600}
+</style>
+</head>
+<body>
+<div id="title-bar">
+  <div><h1>Vocabulary Network</h1><span class="sub">5つの昔話 -- N5 Words</span></div>
+  <div><button id="btn-quiz">🧩 퀴즈</button><button id="btn-reset">Reset Layout</button></div>
+</div>
+<canvas id="c"></canvas>
+<div id="tooltip">
+  <div class="tt-word"></div>
+  <div class="tt-romaji"></div>
+  <div class="tt-reading"></div>
+  <div class="tt-meaning"></div>
+  <div class="tt-cat"></div>
+</div>
+<div id="quiz-overlay">
+  <div id="quiz-modal" style="position:relative">
+    <button id="kr-toggle" title="한글 뜻 보기">한</button>
+    <button class="quiz-close" id="quiz-close-btn">&times;</button>
+    <div id="quiz-content"></div>
+  </div>
+</div>
+<div id="legend">
+  <h4>Node Types</h4>
+  <div class="leg-row"><span class="leg-dot" style="background:#f59e0b"></span> Story</div>
+  <div class="leg-row"><span class="leg-dot" style="background:#7c3aed"></span> Category</div>
+  <div class="leg-row"><span class="leg-dot" style="background:#2563eb"></span> 桃太郎 word</div>
+  <div class="leg-row"><span class="leg-dot" style="background:#10b981"></span> かぐや姫 word</div>
+  <div class="leg-row"><span class="leg-dot" style="background:#06b6d4"></span> 浦島太郎 word</div>
+  <div class="leg-row"><span class="leg-dot" style="background:#f97316"></span> 金太郎 word</div>
+  <div class="leg-row"><span class="leg-dot" style="background:#8b5cf6"></span> 一寸法師 word</div>
+  <div class="leg-row"><span class="leg-dot" style="background:#ec4899"></span> Shared word</div>
+  <h4 style="margin-top:8px">Edges</h4>
+  <div class="leg-row"><span class="leg-dot" style="background:#ef4444"></span> Antonym pair</div>
+  <div class="leg-row"><span class="leg-dot" style="background:rgba(100,116,139,.4)"></span> Same sentence</div>
+</div>
+<script>
+// ── DATA ──────────────────────────────────────────
+const COLORS = {
+  story: '#f59e0b', category: '#7c3aed',
+  momotaro: '#2563eb', kaguyahime: '#10b981',
+  urashimataro: '#06b6d4', kintaro: '#f97316', issunboshi: '#8b5cf6',
+  shared: '#ec4899',
+  antonym: '#ef4444', sentence: 'rgba(71,85,105,.25)',
+  storyEdge: 'rgba(245,158,11,.18)', catEdge: 'rgba(124,58,237,.18)'
+};
+
+// All vocab from 5 stories, deduplicated
+const vocabRaw = [
+  // ── Momotaro ──
+  {w:"むかしむかし",r:"",m:"once upon a time",ro:"mukashi mukashi",s:["momotaro","kaguyahime"],panels:{momotaro:[1],kaguyahime:[1]}},
+  {w:"川",r:"かわ",m:"river",ro:"kawa",s:["momotaro","kintaro"],panels:{momotaro:[1,2],kintaro:[5]}},
+  {w:"洗濯",r:"せんたく",m:"laundry",ro:"sentaku",s:["momotaro"],panels:{momotaro:[1]}},
+  {w:"大きい",r:"おおきい",m:"big",ro:"ookii",s:["momotaro","kintaro","issunboshi"],panels:{momotaro:[2,5],kintaro:[5],issunboshi:[5,10]}},
+  {w:"桃",r:"もも",m:"peach",ro:"momo",s:["momotaro"],panels:{momotaro:[2]}},
+  {w:"流れる",r:"ながれる",m:"to flow",ro:"nagareru",s:["momotaro"],panels:{momotaro:[2]}},
+  {w:"切る",r:"きる",m:"to cut",ro:"kiru",s:["momotaro","kaguyahime"],panels:{momotaro:[3],kaguyahime:[1]}},
+  {w:"中",r:"なか",m:"inside",ro:"naka",s:["momotaro","kaguyahime","issunboshi"],panels:{momotaro:[3],kaguyahime:[2],issunboshi:[8]}},
+  {w:"男の子",r:"おとこのこ",m:"boy",ro:"otoko no ko",s:["momotaro"],panels:{momotaro:[3]}},
+  {w:"生まれる",r:"うまれる",m:"to be born",ro:"umareru",s:["momotaro","issunboshi"],panels:{momotaro:[3],issunboshi:[2]}},
+  {w:"おじいさん",r:"",m:"grandfather",ro:"ojiisan",s:["momotaro","kaguyahime"],panels:{momotaro:[4],kaguyahime:[1,3,7,8,10]}},
+  {w:"名前",r:"なまえ",m:"name",ro:"namae",s:["momotaro","issunboshi"],panels:{momotaro:[4],issunboshi:[3]}},
+  {w:"つける",r:"",m:"to attach / name",ro:"tsukeru",s:["momotaro","issunboshi"],panels:{momotaro:[4],issunboshi:[3]}},
+  {w:"鬼",r:"おに",m:"demon / oni",ro:"oni",s:["momotaro","issunboshi"],panels:{momotaro:[5,8,9],issunboshi:[7]}},
+  {w:"退治",r:"たいじ",m:"extermination",ro:"taiji",s:["momotaro"],panels:{momotaro:[5]}},
+  {w:"行く",r:"いく",m:"to go",ro:"iku",s:["momotaro"],panels:{momotaro:[5]}},
+  {w:"道",r:"みち",m:"road / path",ro:"michi",s:["momotaro"],panels:{momotaro:[6]}},
+  {w:"犬",r:"いぬ",m:"dog",ro:"inu",s:["momotaro"],panels:{momotaro:[6]}},
+  {w:"会う",r:"あう",m:"to meet",ro:"au",s:["momotaro"],panels:{momotaro:[6]}},
+  {w:"きびだんご",r:"",m:"millet dumpling",ro:"kibidango",s:["momotaro"],panels:{momotaro:[6]}},
+  {w:"猿",r:"さる",m:"monkey",ro:"saru",s:["momotaro"],panels:{momotaro:[7]}},
+  {w:"きじ",r:"",m:"pheasant",ro:"kiji",s:["momotaro"],panels:{momotaro:[7]}},
+  {w:"仲間",r:"なかま",m:"companion",ro:"nakama",s:["momotaro"],panels:{momotaro:[7]}},
+  {w:"みんな",r:"",m:"everyone",ro:"minna",s:["momotaro","kaguyahime"],panels:{momotaro:[7,10],kaguyahime:[4]}},
+  {w:"戦う",r:"たたかう",m:"to fight",ro:"tatakau",s:["momotaro","issunboshi"],panels:{momotaro:[8],issunboshi:[7]}},
+  {w:"とても",r:"",m:"very",ro:"totemo",s:["momotaro","kaguyahime"],panels:{momotaro:[8],kaguyahime:[4,10]}},
+  {w:"強い",r:"つよい",m:"strong",ro:"tsuyoi",s:["momotaro","kintaro"],panels:{momotaro:[8],kintaro:[1]}},
+  {w:"負ける",r:"まける",m:"to lose",ro:"makeru",s:["momotaro"],panels:{momotaro:[9]}},
+  {w:"宝物",r:"たからもの",m:"treasure",ro:"takaramono",s:["momotaro"],panels:{momotaro:[9]}},
+  {w:"あげる",r:"",m:"to give",ro:"ageru",s:["momotaro"],panels:{momotaro:[9]}},
+  {w:"持つ",r:"もつ",m:"to hold",ro:"motsu",s:["momotaro"],panels:{momotaro:[10]}},
+  {w:"家",r:"いえ",m:"house / home",ro:"ie",s:["momotaro","urashimataro"],panels:{momotaro:[10],urashimataro:[7]}},
+  {w:"帰る",r:"かえる",m:"to return",ro:"kaeru",s:["momotaro","kaguyahime","urashimataro"],panels:{momotaro:[10],kaguyahime:[8,10],urashimataro:[7]}},
+  {w:"幸せ",r:"しあわせ",m:"happiness",ro:"shiawase",s:["momotaro"],panels:{momotaro:[10]}},
+
+  // ── Kaguyahime ──
+  {w:"山",r:"やま",m:"mountain",ro:"yama",s:["kaguyahime","kintaro"],panels:{kaguyahime:[1],kintaro:[1]}},
+  {w:"竹",r:"たけ",m:"bamboo",ro:"take",s:["kaguyahime"],panels:{kaguyahime:[1]}},
+  {w:"光る",r:"ひかる",m:"to shine",ro:"hikaru",s:["kaguyahime"],panels:{kaguyahime:[2]}},
+  {w:"小さい",r:"ちいさい",m:"small",ro:"chiisai",s:["kaguyahime","issunboshi"],panels:{kaguyahime:[2],issunboshi:[2]}},
+  {w:"女の子",r:"おんなのこ",m:"girl",ro:"onna no ko",s:["kaguyahime"],panels:{kaguyahime:[2]}},
+  {w:"呼ぶ",r:"よぶ",m:"to call",ro:"yobu",s:["kaguyahime"],panels:{kaguyahime:[3]}},
+  {w:"姫",r:"ひめ",m:"princess",ro:"hime",s:["kaguyahime"],panels:{kaguyahime:[3]}},
+  {w:"きれい",r:"",m:"beautiful",ro:"kirei",s:["kaguyahime","urashimataro"],panels:{kaguyahime:[4],urashimataro:[4]}},
+  {w:"好き",r:"すき",m:"like / love",ro:"suki",s:["kaguyahime","issunboshi"],panels:{kaguyahime:[4],issunboshi:[6]}},
+  {w:"なる",r:"",m:"to become",ro:"naru",s:["kaguyahime","kintaro"],panels:{kaguyahime:[4],kintaro:[7]}},
+  {w:"五人",r:"ごにん",m:"five people",ro:"gonin",s:["kaguyahime"],panels:{kaguyahime:[5]}},
+  {w:"若者",r:"わかもの",m:"young person",ro:"wakamono",s:["kaguyahime"],panels:{kaguyahime:[5]}},
+  {w:"結婚",r:"けっこん",m:"marriage",ro:"kekkon",s:["kaguyahime","issunboshi"],panels:{kaguyahime:[5],issunboshi:[10]}},
+  {w:"言う",r:"いう",m:"to say",ro:"iu",s:["kaguyahime"],panels:{kaguyahime:[5]}},
+  {w:"難しい",r:"むずかしい",m:"difficult",ro:"muzukashii",s:["kaguyahime"],panels:{kaguyahime:[6]}},
+  {w:"問題",r:"もんだい",m:"problem",ro:"mondai",s:["kaguyahime"],panels:{kaguyahime:[6]}},
+  {w:"出す",r:"だす",m:"to take out",ro:"dasu",s:["kaguyahime"],panels:{kaguyahime:[6]}},
+  {w:"だれも",r:"",m:"nobody",ro:"daremo",s:["kaguyahime"],panels:{kaguyahime:[6]}},
+  {w:"ある日",r:"あるひ",m:"one day",ro:"aru hi",s:["kaguyahime"],panels:{kaguyahime:[7]}},
+  {w:"月",r:"つき",m:"moon",ro:"tsuki",s:["kaguyahime"],panels:{kaguyahime:[7,8,9,10]}},
+  {w:"見る",r:"みる",m:"to see / look",ro:"miru",s:["kaguyahime","kintaro"],panels:{kaguyahime:[7],kintaro:[6]}},
+  {w:"泣く",r:"なく",m:"to cry",ro:"naku",s:["kaguyahime"],panels:{kaguyahime:[7]}},
+  {w:"私",r:"わたし",m:"I / me",ro:"watashi",s:["kaguyahime"],panels:{kaguyahime:[8]}},
+  {w:"もうすぐ",r:"",m:"soon",ro:"mousugu",s:["kaguyahime"],panels:{kaguyahime:[8]}},
+  {w:"来る",r:"くる",m:"to come",ro:"kuru",s:["kaguyahime","kintaro"],panels:{kaguyahime:[8,9],kintaro:[6]}},
+  {w:"人",r:"ひと",m:"person",ro:"hito",s:["kaguyahime"],panels:{kaguyahime:[9]}},
+  {w:"迎える",r:"むかえる",m:"to welcome",ro:"mukaeru",s:["kaguyahime"],panels:{kaguyahime:[9]}},
+  {w:"悲しい",r:"かなしい",m:"sad",ro:"kanashii",s:["kaguyahime","urashimataro"],panels:{kaguyahime:[10],urashimataro:[10]}},
+
+  // ── Urashimataro ──
+  {w:"海",r:"うみ",m:"sea",ro:"umi",s:["urashimataro"],panels:{urashimataro:[1]}},
+  {w:"近く",r:"ちかく",m:"nearby",ro:"chikaku",s:["urashimataro"],panels:{urashimataro:[1]}},
+  {w:"住む",r:"すむ",m:"to live",ro:"sumu",s:["urashimataro","kintaro"],panels:{urashimataro:[1],kintaro:[1]}},
+  {w:"子ども",r:"こども",m:"child",ro:"kodomo",s:["urashimataro","issunboshi"],panels:{urashimataro:[2],issunboshi:[1]}},
+  {w:"亀",r:"かめ",m:"turtle",ro:"kame",s:["urashimataro"],panels:{urashimataro:[2]}},
+  {w:"いじめる",r:"",m:"to bully",ro:"ijimeru",s:["urashimataro"],panels:{urashimataro:[2]}},
+  {w:"助ける",r:"たすける",m:"to help / save",ro:"tasukeru",s:["urashimataro"],panels:{urashimataro:[2]}},
+  {w:"お礼",r:"おれい",m:"thanks / reward",ro:"orei",s:["urashimataro"],panels:{urashimataro:[3]}},
+  {w:"竜宮城",r:"りゅうぐうじょう",m:"dragon palace",ro:"ryuuguujou",s:["urashimataro"],panels:{urashimataro:[3]}},
+  {w:"連れていく",r:"つれていく",m:"to take (someone)",ro:"tsureteiku",s:["urashimataro"],panels:{urashimataro:[3]}},
+  {w:"すばらしい",r:"",m:"wonderful",ro:"subarashii",s:["urashimataro"],panels:{urashimataro:[4]}},
+  {w:"ここ",r:"",m:"here",ro:"koko",s:["urashimataro"],panels:{urashimataro:[5]}},
+  {w:"楽しい",r:"たのしい",m:"fun / enjoyable",ro:"tanoshii",s:["urashimataro"],panels:{urashimataro:[5]}},
+  {w:"遊ぶ",r:"あそぶ",m:"to play",ro:"asobu",s:["urashimataro","kintaro"],panels:{urashimataro:[5],kintaro:[2]}},
+  {w:"毎日",r:"まいにち",m:"every day",ro:"mainichi",s:["urashimataro","kintaro"],panels:{urashimataro:[6],kintaro:[2]}},
+  {w:"おいしい",r:"",m:"delicious",ro:"oishii",s:["urashimataro"],panels:{urashimataro:[6]}},
+  {w:"料理",r:"りょうり",m:"cooking / food",ro:"ryouri",s:["urashimataro"],panels:{urashimataro:[6]}},
+  {w:"食べる",r:"たべる",m:"to eat",ro:"taberu",s:["urashimataro"],panels:{urashimataro:[6]}},
+  {w:"恋しい",r:"こいしい",m:"longing / dear",ro:"koishii",s:["urashimataro"],panels:{urashimataro:[7]}},
+  {w:"玉手箱",r:"たまてばこ",m:"treasure box",ro:"tamatebako",s:["urashimataro"],panels:{urashimataro:[8]}},
+  {w:"くれる",r:"",m:"to give (me)",ro:"kureru",s:["urashimataro"],panels:{urashimataro:[8]}},
+  {w:"絶対に",r:"ぜったいに",m:"absolutely / never",ro:"zettaini",s:["urashimataro"],panels:{urashimataro:[8]}},
+  {w:"開ける",r:"あける",m:"to open",ro:"akeru",s:["urashimataro"],panels:{urashimataro:[8]}},
+  {w:"知らない",r:"しらない",m:"unknown",ro:"shiranai",s:["urashimataro"],panels:{urashimataro:[9]}},
+  {w:"町",r:"まち",m:"town",ro:"machi",s:["urashimataro"],panels:{urashimataro:[9]}},
+  {w:"百年",r:"ひゃくねん",m:"100 years",ro:"hyakunen",s:["urashimataro"],panels:{urashimataro:[9]}},
+  {w:"過ぎる",r:"すぎる",m:"to pass (time)",ro:"sugiru",s:["urashimataro"],panels:{urashimataro:[9]}},
+  {w:"白い",r:"しろい",m:"white",ro:"shiroi",s:["urashimataro"],panels:{urashimataro:[10]}},
+  {w:"煙",r:"けむり",m:"smoke",ro:"kemuri",s:["urashimataro"],panels:{urashimataro:[10]}},
+  {w:"出る",r:"でる",m:"to come out",ro:"deru",s:["urashimataro"],panels:{urashimataro:[10]}},
+
+  // ── Kintaro ──
+  {w:"お母さん",r:"おかあさん",m:"mother",ro:"okaasan",s:["kintaro"],panels:{kintaro:[1]}},
+  {w:"木",r:"き",m:"tree",ro:"ki",s:["kintaro"],panels:{kintaro:[2]}},
+  {w:"倒す",r:"たおす",m:"to knock down",ro:"taosu",s:["kintaro"],panels:{kintaro:[2]}},
+  {w:"動物",r:"どうぶつ",m:"animal",ro:"doubutsu",s:["kintaro"],panels:{kintaro:[3]}},
+  {w:"友達",r:"ともだち",m:"friend",ro:"tomodachi",s:["kintaro"],panels:{kintaro:[3]}},
+  {w:"一緒に",r:"いっしょに",m:"together",ro:"isshoni",s:["kintaro"],panels:{kintaro:[3,7]}},
+  {w:"熊",r:"くま",m:"bear",ro:"kuma",s:["kintaro"],panels:{kintaro:[4]}},
+  {w:"すもう",r:"",m:"sumo wrestling",ro:"sumou",s:["kintaro"],panels:{kintaro:[4]}},
+  {w:"する",r:"",m:"to do",ro:"suru",s:["kintaro"],panels:{kintaro:[4]}},
+  {w:"勝つ",r:"かつ",m:"to win",ro:"katsu",s:["kintaro"],panels:{kintaro:[4]}},
+  {w:"魚",r:"さかな",m:"fish",ro:"sakana",s:["kintaro"],panels:{kintaro:[5]}},
+  {w:"捕まえる",r:"つかまえる",m:"to catch",ro:"tsukamaeru",s:["kintaro","issunboshi"],panels:{kintaro:[5],issunboshi:[7]}},
+  {w:"侍",r:"さむらい",m:"samurai",ro:"samurai",s:["kintaro"],panels:{kintaro:[6]}},
+  {w:"びっくりする",r:"",m:"to be surprised",ro:"bikkuri suru",s:["kintaro"],panels:{kintaro:[6]}},
+  {w:"武士",r:"ぶし",m:"warrior",ro:"bushi",s:["kintaro"],panels:{kintaro:[7,8]}},
+  {w:"有名",r:"ゆうめい",m:"famous",ro:"yuumei",s:["kintaro"],panels:{kintaro:[8]}},
+  {w:"嬉しい",r:"うれしい",m:"happy / glad",ro:"ureshii",s:["kintaro"],panels:{kintaro:[8]}},
+
+  // ── Issunboshi ──
+  {w:"いない",r:"",m:"not there",ro:"inai",s:["issunboshi"],panels:{issunboshi:[1]}},
+  {w:"いる",r:"",m:"to exist (animate)",ro:"iru",s:["issunboshi"],panels:{issunboshi:[1]}},
+  {w:"赤ちゃん",r:"あかちゃん",m:"baby",ro:"akachan",s:["issunboshi"],panels:{issunboshi:[2]}},
+  {w:"大きさ",r:"おおきさ",m:"size",ro:"ookisa",s:["issunboshi"],panels:{issunboshi:[2]}},
+  {w:"元気",r:"げんき",m:"healthy / energetic",ro:"genki",s:["issunboshi"],panels:{issunboshi:[3]}},
+  {w:"都",r:"みやこ",m:"capital city",ro:"miyako",s:["issunboshi"],panels:{issunboshi:[4]}},
+  {w:"お椀",r:"おわん",m:"bowl",ro:"owan",s:["issunboshi"],panels:{issunboshi:[4]}},
+  {w:"船",r:"ふね",m:"boat / ship",ro:"fune",s:["issunboshi"],panels:{issunboshi:[4]}},
+  {w:"箸",r:"はし",m:"chopsticks",ro:"hashi",s:["issunboshi"],panels:{issunboshi:[4]}},
+  {w:"着く",r:"つく",m:"to arrive",ro:"tsuku",s:["issunboshi"],panels:{issunboshi:[5]}},
+  {w:"働く",r:"はたらく",m:"to work",ro:"hataraku",s:["issunboshi"],panels:{issunboshi:[5,6]}},
+  {w:"お姫様",r:"おひめさま",m:"princess (polite)",ro:"ohimesama",s:["issunboshi"],panels:{issunboshi:[6]}},
+  {w:"そば",r:"",m:"nearby / beside",ro:"soba",s:["issunboshi"],panels:{issunboshi:[6]}},
+  {w:"お腹",r:"おなか",m:"stomach",ro:"onaka",s:["issunboshi"],panels:{issunboshi:[8]}},
+  {w:"入る",r:"はいる",m:"to enter",ro:"hairu",s:["issunboshi"],panels:{issunboshi:[8]}},
+  {w:"針",r:"はり",m:"needle",ro:"hari",s:["issunboshi"],panels:{issunboshi:[8]}},
+  {w:"逃げる",r:"にげる",m:"to run away",ro:"nigeru",s:["issunboshi"],panels:{issunboshi:[9]}},
+  {w:"魔法",r:"まほう",m:"magic",ro:"mahou",s:["issunboshi"],panels:{issunboshi:[9]}},
+  {w:"小槌",r:"こづち",m:"mallet",ro:"kozuchi",s:["issunboshi"],panels:{issunboshi:[9]}},
+  {w:"落とす",r:"おとす",m:"to drop",ro:"otosu",s:["issunboshi"],panels:{issunboshi:[9]}},
+  {w:"振る",r:"ふる",m:"to swing / wave",ro:"furu",s:["issunboshi"],panels:{issunboshi:[10]}},
+  {w:"暮らす",r:"くらす",m:"to live (life)",ro:"kurasu",s:["issunboshi"],panels:{issunboshi:[10]}},
+];
+
+// Categories
+const categories = [
+  {id:"cat_people",label:"人物",sub:"People",words:["おじいさん","男の子","女の子","姫","若者","人","私","仲間","みんな","五人","子ども","お母さん","友達","赤ちゃん","お姫様","侍","武士"]},
+  {id:"cat_places",label:"場所",sub:"Places",words:["川","山","道","家","中","海","竜宮城","町","都"]},
+  {id:"cat_actions",label:"動作",sub:"Actions",words:["切る","流れる","生まれる","行く","会う","戦う","帰る","持つ","光る","呼ぶ","言う","出す","見る","泣く","来る","迎える","つける","あげる","なる","住む","いじめる","助ける","連れていく","遊ぶ","食べる","開ける","過ぎる","出る","倒す","する","勝つ","捕まえる","働く","入る","逃げる","落とす","振る","暮らす","着く","くれる"]},
+  {id:"cat_nature",label:"自然",sub:"Nature",words:["桃","竹","月","鬼","海","木","煙","魚","亀","動物","熊"]},
+  {id:"cat_food",label:"食べ物",sub:"Food",words:["きびだんご","料理","魚"]},
+  {id:"cat_adj",label:"形容詞",sub:"Adjectives",words:["大きい","小さい","強い","難しい","きれい","悲しい","幸せ","好き","楽しい","おいしい","恋しい","白い","嬉しい","すばらしい","有名","元気"]},
+  {id:"cat_animals",label:"動物",sub:"Animals",words:["犬","猿","きじ","亀","熊","魚","動物"]},
+  {id:"cat_things",label:"もの",sub:"Things",words:["洗濯","名前","退治","宝物","結婚","問題","お礼","玉手箱","すもう","お椀","船","箸","針","小槌","魔法","大きさ"]},
+];
+
+// Antonym pairs
+const antonyms = [
+  ["大きい","小さい"],["行く","来る"],["強い","負ける"],
+  ["幸せ","悲しい"],["男の子","女の子"],["出す","入る"],
+  ["楽しい","悲しい"],["勝つ","負ける"],["入る","出る"],
+  ["開ける","閉める"],
+];
+
+// ── BUILD GRAPH ───────────────────────────────────
+const nodes = [];
+const edges = [];
+const nodeMap = {};
+let nid = 0;
+
+function addNode(id, label, type, extra={}) {
+  if (nodeMap[id]) return nodeMap[id];
+  const n = {id, label, type, ...extra, x:0, y:0, vx:0, vy:0, fx:null, fy:null, _id:nid++};
+  nodes.push(n);
+  nodeMap[id] = n;
+  return n;
+}
+function addEdge(a, b, type, strength=1) {
+  if (!nodeMap[a] || !nodeMap[b]) return;
+  edges.push({source:nodeMap[a], target:nodeMap[b], type, strength});
+}
+
+// Story nodes
+addNode("story_momotaro","🍑 桃太郎","story",{color:COLORS.momotaro, radius:32});
+addNode("story_kaguyahime","🎋 かぐや姫","story",{color:COLORS.kaguyahime, radius:32});
+addNode("story_urashimataro","🐢 浦島太郎","story",{color:COLORS.urashimataro, radius:32});
+addNode("story_kintaro","💪 金太郎","story",{color:COLORS.kintaro, radius:32});
+addNode("story_issunboshi","🔨 一寸法師","story",{color:COLORS.issunboshi, radius:32});
+
+// Category nodes
+categories.forEach(c => {
+  addNode(c.id, c.label, "category", {sub:c.sub, color:COLORS.category, radius:22});
+});
+
+// Determine word color based on stories
+function wordColor(stories) {
+  if (stories.length > 1) return COLORS.shared;
+  const storyColorMap = {
+    momotaro: COLORS.momotaro,
+    kaguyahime: COLORS.kaguyahime,
+    urashimataro: COLORS.urashimataro,
+    kintaro: COLORS.kintaro,
+    issunboshi: COLORS.issunboshi,
+  };
+  return storyColorMap[stories[0]] || COLORS.shared;
+}
+
+// Word nodes
+const wordNodeIds = {};
+vocabRaw.forEach(v => {
+  const color = wordColor(v.s);
+  const wid = "w_"+v.w;
+  addNode(wid, v.w, "word", {reading:v.r, meaning:v.m, romaji:v.ro||"", color, radius:12, stories:v.s, panels:v.panels});
+  wordNodeIds[v.w] = wid;
+
+  // Edge to story
+  v.s.forEach(st => addEdge(wid, "story_"+st, "story", .6));
+});
+
+// Edge to category
+categories.forEach(c => {
+  c.words.forEach(w => {
+    if (wordNodeIds[w]) addEdge(wordNodeIds[w], c.id, "category", .4);
+  });
+});
+
+// Same-sentence edges (words sharing a panel in same story)
+vocabRaw.forEach((v1, i) => {
+  vocabRaw.forEach((v2, j) => {
+    if (j <= i) return;
+    // check if they share any panel in any story
+    for (const st of v1.s) {
+      if (!v2.s.includes(st)) continue;
+      const p1 = v1.panels[st], p2 = v2.panels[st];
+      if (p1 && p2 && p1.some(p => p2.includes(p))) {
+        addEdge("w_"+v1.w, "w_"+v2.w, "sentence", .15);
+        return;
+      }
+    }
+  });
+});
+
+// Antonym edges
+antonyms.forEach(([a,b]) => {
+  if (wordNodeIds[a] && wordNodeIds[b]) addEdge(wordNodeIds[a], wordNodeIds[b], "antonym", .5);
+});
+
+// ── INITIAL POSITIONS ─────────────────────────────
+const cx = window.innerWidth / 2, cy = window.innerHeight / 2;
+nodes.forEach((n, i) => {
+  const angle = (i / nodes.length) * Math.PI * 2;
+  const r = 150 + Math.random() * 200;
+  n.x = cx + Math.cos(angle) * r;
+  n.y = cy + Math.sin(angle) * r;
+});
+
+// ── CANVAS SETUP ──────────────────────────────────
+const canvas = document.getElementById('c');
+const ctx = canvas.getContext('2d');
+let W, H, dpr;
+
+function resize() {
+  dpr = window.devicePixelRatio || 1;
+  W = window.innerWidth; H = window.innerHeight;
+  canvas.width = W * dpr; canvas.height = H * dpr;
+  canvas.style.width = W + 'px'; canvas.style.height = H + 'px';
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+}
+resize();
+window.addEventListener('resize', resize);
+
+// ── SIMULATION ────────────────────────────────────
+const SIM = {alpha:1, alphaDecay:.003, alphaMin:.001, velDecay:.88};
+
+function tick() {
+  // Center gravity
+  nodes.forEach(n => {
+    n.vx += (cx - n.x) * .0008;
+    n.vy += (cy - n.y) * .0008;
+  });
+
+  // Edge spring forces
+  edges.forEach(e => {
+    const dx = e.target.x - e.source.x, dy = e.target.y - e.source.y;
+    const dist = Math.sqrt(dx*dx + dy*dy) || 1;
+    const ideal = e.type === 'story' ? 160 : e.type === 'category' ? 130 : e.type === 'antonym' ? 180 : 90;
+    const f = (dist - ideal) * .003 * e.strength * SIM.alpha;
+    const fx = dx / dist * f, fy = dy / dist * f;
+    e.source.vx += fx; e.source.vy += fy;
+    e.target.vx -= fx; e.target.vy -= fy;
+  });
+
+  // Repulsion (Barnes-Hut would be better but N is small)
+  for (let i = 0; i < nodes.length; i++) {
+    for (let j = i + 1; j < nodes.length; j++) {
+      const a = nodes[i], b = nodes[j];
+      let dx = b.x - a.x, dy = b.y - a.y;
+      let dist2 = dx*dx + dy*dy;
+      if (dist2 < 1) { dx = Math.random()-.5; dy = Math.random()-.5; dist2 = 1; }
+      const minDist = (a.radius||12) + (b.radius||12) + 30;
+      const repulse = Math.min(800 / dist2, 2) * SIM.alpha;
+      const dist = Math.sqrt(dist2);
+      a.vx -= dx/dist * repulse;
+      a.vy -= dy/dist * repulse;
+      b.vx += dx/dist * repulse;
+      b.vy += dy/dist * repulse;
+
+      // Hard collision
+      if (dist < minDist) {
+        const push = (minDist - dist) * .5;
+        a.vx -= dx/dist * push * .05;
+        a.vy -= dy/dist * push * .05;
+        b.vx += dx/dist * push * .05;
+        b.vy += dy/dist * push * .05;
+      }
+    }
+  }
+
+  // Integrate
+  nodes.forEach(n => {
+    if (n.fx !== null) { n.x = n.fx; n.y = n.fy; n.vx = 0; n.vy = 0; return; }
+    n.vx *= SIM.velDecay;
+    n.vy *= SIM.velDecay;
+    n.x += n.vx;
+    n.y += n.vy;
+    // Bounds
+    const pad = 40;
+    n.x = Math.max(pad, Math.min(W - pad, n.x));
+    n.y = Math.max(pad + 40, Math.min(H - pad, n.y));
+  });
+
+  SIM.alpha = Math.max(SIM.alphaMin, SIM.alpha - SIM.alphaDecay);
+}
+
+// ── RENDER ────────────────────────────────────────
+let selectedNode = null;
+let hoverNode = null;
+let time = 0;
+
+function isConnected(n) {
+  if (!selectedNode) return true;
+  if (n === selectedNode) return true;
+  return edges.some(e =>
+    (e.source === selectedNode && e.target === n) ||
+    (e.target === selectedNode && e.source === n)
+  );
+}
+
+function edgeConnected(e) {
+  if (!selectedNode) return true;
+  return e.source === selectedNode || e.target === selectedNode;
+}
+
+function draw() {
+  time += .016;
+  ctx.clearRect(0, 0, W, H);
+
+  // Background subtle grid
+  ctx.strokeStyle = 'rgba(51,65,85,.12)';
+  ctx.lineWidth = 1;
+  const gs = 60;
+  for (let x = gs; x < W; x += gs) { ctx.beginPath(); ctx.moveTo(x,0); ctx.lineTo(x,H); ctx.stroke(); }
+  for (let y = gs; y < H; y += gs) { ctx.beginPath(); ctx.moveTo(0,y); ctx.lineTo(W,y); ctx.stroke(); }
+
+  // Edges
+  edges.forEach(e => {
+    const connected = edgeConnected(e);
+    const alpha = selectedNode ? (connected ? 1 : .06) : 1;
+
+    ctx.beginPath();
+    ctx.moveTo(e.source.x, e.source.y);
+    ctx.lineTo(e.target.x, e.target.y);
+
+    if (e.type === 'antonym') {
+      ctx.strokeStyle = `rgba(239,68,68,${.6 * alpha})`;
+      ctx.lineWidth = connected && selectedNode ? 2.5 : 2;
+      ctx.setLineDash([6, 4]);
+    } else if (e.type === 'sentence') {
+      ctx.strokeStyle = `rgba(71,85,105,${.2 * alpha})`;
+      ctx.lineWidth = .8;
+      ctx.setLineDash([]);
+    } else if (e.type === 'story') {
+      const c = e.target.color || e.source.color || COLORS.story;
+      ctx.strokeStyle = hexToRgba(c, .15 * alpha);
+      ctx.lineWidth = 1.5;
+      ctx.setLineDash([]);
+    } else {
+      ctx.strokeStyle = `rgba(124,58,237,${.12 * alpha})`;
+      ctx.lineWidth = 1;
+      ctx.setLineDash([]);
+    }
+    ctx.stroke();
+    ctx.setLineDash([]);
+  });
+
+  // Nodes
+  nodes.forEach(n => {
+    const connected = isConnected(n);
+    const isHover = n === hoverNode;
+    const isSelected = n === selectedNode;
+    const baseAlpha = selectedNode ? (connected ? 1 : .12) : 1;
+    const r = n.radius || 12;
+
+    // Glow
+    if ((connected || !selectedNode) && n.type !== 'word') {
+      const glow = ctx.createRadialGradient(n.x, n.y, r * .5, n.x, n.y, r * 2.5);
+      glow.addColorStop(0, hexToRgba(n.color, .2 + Math.sin(time * 1.5 + n._id) * .05));
+      glow.addColorStop(1, 'rgba(0,0,0,0)');
+      ctx.fillStyle = glow;
+      ctx.beginPath(); ctx.arc(n.x, n.y, r * 2.5, 0, Math.PI * 2); ctx.fill();
+    }
+
+    // Word node subtle glow on hover/select
+    if (n.type === 'word' && (isHover || isSelected)) {
+      const glow = ctx.createRadialGradient(n.x, n.y, r * .3, n.x, n.y, r * 2);
+      glow.addColorStop(0, hexToRgba(n.color, .3));
+      glow.addColorStop(1, 'rgba(0,0,0,0)');
+      ctx.fillStyle = glow;
+      ctx.beginPath(); ctx.arc(n.x, n.y, r * 2, 0, Math.PI * 2); ctx.fill();
+    }
+
+    // Circle
+    ctx.beginPath();
+    ctx.arc(n.x, n.y, r, 0, Math.PI * 2);
+    const fillAlpha = baseAlpha * (isHover ? 1 : .85);
+    ctx.fillStyle = hexToRgba(n.color, fillAlpha);
+    ctx.fill();
+
+    // Border
+    if (isSelected) {
+      ctx.lineWidth = 3;
+      ctx.strokeStyle = '#ffffff';
+      ctx.stroke();
+    } else if (isHover) {
+      ctx.lineWidth = 2;
+      ctx.strokeStyle = hexToRgba(n.color, 1);
+      ctx.stroke();
+    } else if (n.type !== 'word') {
+      ctx.lineWidth = 1.5;
+      ctx.strokeStyle = hexToRgba(n.color, .5 * baseAlpha);
+      ctx.stroke();
+    }
+
+    // Label
+    if (baseAlpha < .2) return;
+    ctx.globalAlpha = baseAlpha;
+    if (n.type === 'story') {
+      ctx.font = 'bold 13px -apple-system, sans-serif';
+      ctx.fillStyle = '#f1f5f9';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText(n.label, n.x, n.y);
+    } else if (n.type === 'category') {
+      ctx.font = 'bold 12px -apple-system, sans-serif';
+      ctx.fillStyle = '#e2e8f0';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText(n.label, n.x, n.y - 1);
+      ctx.font = '9px -apple-system, sans-serif';
+      ctx.fillStyle = '#94a3b8';
+      ctx.fillText(n.sub, n.x, n.y + 11);
+    } else {
+      ctx.font = '11px -apple-system, sans-serif';
+      ctx.fillStyle = '#e2e8f0';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'top';
+      ctx.fillText(n.label, n.x, n.y + r + 4);
+      if (n.romaji) {
+        ctx.font = 'italic 8px -apple-system, sans-serif';
+        ctx.fillStyle = 'rgba(167,139,250,.7)';
+        ctx.fillText(n.romaji, n.x, n.y + r + 17);
+      }
+    }
+    ctx.globalAlpha = 1;
+  });
+
+  // Antonym labels
+  edges.forEach(e => {
+    if (e.type !== 'antonym') return;
+    if (selectedNode && !edgeConnected(e)) return;
+    const mx = (e.source.x + e.target.x) / 2;
+    const my = (e.source.y + e.target.y) / 2;
+    ctx.font = '9px -apple-system, sans-serif';
+    ctx.fillStyle = 'rgba(239,68,68,.7)';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText('↔', mx, my);
+  });
+}
+
+function hexToRgba(hex, a) {
+  if (hex.startsWith('rgba')) {
+    return hex.replace(/[\d.]+\)$/, a + ')');
+  }
+  const r = parseInt(hex.slice(1,3),16), g = parseInt(hex.slice(3,5),16), b = parseInt(hex.slice(5,7),16);
+  return `rgba(${r},${g},${b},${a})`;
+}
+
+// ── INTERACTION ───────────────────────────────────
+let dragNode = null;
+let isDragging = false;
+const tooltip = document.getElementById('tooltip');
+
+function getNode(x, y) {
+  // Reverse order to pick top node
+  for (let i = nodes.length - 1; i >= 0; i--) {
+    const n = nodes[i];
+    const r = (n.radius || 12) + 6;
+    if ((n.x-x)**2 + (n.y-y)**2 < r*r) return n;
+  }
+  return null;
+}
+
+const storyNames = {
+  momotaro:'桃太郎', kaguyahime:'かぐや姫',
+  urashimataro:'浦島太郎', kintaro:'金太郎', issunboshi:'一寸法師'
+};
+
+function showTooltip(n, px, py) {
+  if (!n || n.type === 'story' || n.type === 'category') {
+    tooltip.style.opacity = 0;
+    return;
+  }
+  tooltip.querySelector('.tt-word').textContent = n.label;
+  tooltip.querySelector('.tt-romaji').textContent = n.romaji || '';
+  tooltip.querySelector('.tt-reading').textContent = n.reading || '(kana)';
+  tooltip.querySelector('.tt-meaning').textContent = n.meaning || '';
+  const sNames = (n.stories||[]).map(s => storyNames[s] || s).join(', ');
+  tooltip.querySelector('.tt-cat').textContent = sNames;
+  tooltip.style.opacity = 1;
+  // Position
+  let tx = px + 16, ty = py - 10;
+  if (tx + 220 > W) tx = px - 230;
+  if (ty + 100 > H) ty = py - 100;
+  if (ty < 10) ty = 10;
+  tooltip.style.left = tx + 'px';
+  tooltip.style.top = ty + 'px';
+}
+
+canvas.addEventListener('pointerdown', e => {
+  const n = getNode(e.clientX, e.clientY);
+  if (n) {
+    dragNode = n;
+    isDragging = false;
+    n.fx = n.x; n.fy = n.y;
+    SIM.alpha = Math.max(SIM.alpha, .1);
+  }
+});
+
+canvas.addEventListener('pointermove', e => {
+  if (dragNode) {
+    isDragging = true;
+    dragNode.fx = e.clientX;
+    dragNode.fy = e.clientY;
+    dragNode.x = e.clientX;
+    dragNode.y = e.clientY;
+    SIM.alpha = Math.max(SIM.alpha, .05);
+  }
+  const n = getNode(e.clientX, e.clientY);
+  hoverNode = n;
+  canvas.style.cursor = n ? 'pointer' : 'default';
+  showTooltip(n, e.clientX, e.clientY);
+});
+
+canvas.addEventListener('pointerup', e => {
+  if (dragNode) {
+    if (!isDragging) {
+      // Click
+      if (selectedNode === dragNode) {
+        selectedNode = null;
+      } else {
+        selectedNode = dragNode;
+      }
+    }
+    dragNode.fx = null; dragNode.fy = null;
+    dragNode = null;
+    SIM.alpha = Math.max(SIM.alpha, .3);
+  }
+});
+
+canvas.addEventListener('pointerleave', () => {
+  hoverNode = null;
+  tooltip.style.opacity = 0;
+});
+
+// Click background to deselect
+canvas.addEventListener('click', e => {
+  if (!getNode(e.clientX, e.clientY)) {
+    selectedNode = null;
+  }
+});
+
+// Reset button
+document.getElementById('btn-reset').addEventListener('click', () => {
+  SIM.alpha = 1;
+  selectedNode = null;
+  nodes.forEach((n, i) => {
+    const angle = (i / nodes.length) * Math.PI * 2;
+    const r = 150 + Math.random() * 200;
+    n.x = cx + Math.cos(angle) * r;
+    n.y = cy + Math.sin(angle) * r;
+    n.vx = 0; n.vy = 0; n.fx = null; n.fy = null;
+  });
+});
+
+// Touch support
+canvas.addEventListener('touchstart', e => e.preventDefault(), {passive:false});
+
+// ── ANIMATE ───────────────────────────────────────
+function loop() {
+  tick();
+  draw();
+  requestAnimationFrame(loop);
+}
+
+// Add some floating particles for atmosphere
+const particles = Array.from({length:40}, () => ({
+  x: Math.random() * W, y: Math.random() * H,
+  vx: (Math.random() - .5) * .3, vy: (Math.random() - .5) * .3,
+  r: Math.random() * 1.5 + .5,
+  a: Math.random() * .3 + .1
+}));
+
+const _origDraw = draw;
+draw = function() {
+  _origDraw();
+  // Particles
+  particles.forEach(p => {
+    p.x += p.vx; p.y += p.vy;
+    if (p.x < 0) p.x = W; if (p.x > W) p.x = 0;
+    if (p.y < 0) p.y = H; if (p.y > H) p.y = 0;
+    ctx.beginPath();
+    ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
+    ctx.fillStyle = `rgba(124,58,237,${p.a * (.5 + .5 * Math.sin(time * 2 + p.x))})`;
+    ctx.fill();
+  });
+};
+
+// ── QUIZ MODE ─────────────────────────────────────
+const quizOverlay = document.getElementById('quiz-overlay');
+const quizModal = document.getElementById('quiz-modal');
+const quizContent = document.getElementById('quiz-content');
+const krToggle = document.getElementById('kr-toggle');
+let krMode = false;
+krToggle.addEventListener('click', () => {
+  krMode = !krMode;
+  krToggle.classList.toggle('active', krMode);
+  quizModal.classList.toggle('kr-mode', krMode);
+});
+
+// Korean meanings for all Japanese words used in quiz choices
+const KR = {
+  "川":"강","桃":"복숭아","刀":"칼","男の子":"남자아이","犬":"개","鬼":"도깨비","宝物":"보물",
+  "山":"산","竹":"대나무","女の子":"여자아이","きれい":"예쁜/아름다운","月":"달","悲しい":"슬픈",
+  "富士山":"후지산","大きい":"큰","小さい":"작은","行く":"가다","来る":"오다","強い":"강한",
+  "負ける":"지다","幸せ":"행복","おじいさん":"할아버지","姫":"공주","切る":"자르다",
+  "猿":"원숭이","きじ":"꿩","洗濯":"빨래","光る":"빛나다","流れる":"흐르다","戦う":"싸우다",
+  "帰る":"돌아가다","きびだんご":"기비당고","結婚":"결혼","家":"집","道":"길",
+  "五人":"다섯 명","三人":"세 명","七人":"일곱 명","一人":"한 명",
+  "竹を切る":"대나무를 베다","泣く":"울다","仲間":"동료","美しい":"아름다운",
+  "おばあさん":"할머니","桃太郎":"모모타로","かぐやひめ":"카구야히메",
+  "むかしむかし":"옛날 옛적에","元気":"건강한","名前":"이름",
+  "島":"섬","食べる":"먹다","飲む":"마시다","見る":"보다","聞く":"듣다",
+  "話す":"말하다","走る":"달리다","持つ":"들다/갖다","育てる":"키우다",
+  "花":"꽃","空":"하늘","海":"바다","星":"별","着物":"기모노","船":"배","お金":"돈",
+  "米":"쌀","王子":"왕자","手紙":"편지","薬":"약","不死":"불사","燃える":"타다",
+  "町":"마을","村":"마을","森":"숲","お姫様":"공주님","亀":"거북이",
+  // Urashimataro
+  "近く":"근처","住む":"살다","子ども":"아이","いじめる":"괴롭히다","助ける":"돕다/구하다",
+  "お礼":"감사/보답","竜宮城":"용궁","連れていく":"데려가다","すばらしい":"훌륭한",
+  "ここ":"여기","楽しい":"즐거운","遊ぶ":"놀다","毎日":"매일","おいしい":"맛있는",
+  "料理":"요리","恋しい":"그리운","玉手箱":"보물상자","くれる":"주다",
+  "絶対に":"절대로","開ける":"열다","知らない":"모르는","百年":"백년","過ぎる":"지나다",
+  "白い":"하얀","煙":"연기","出る":"나오다",
+  // Kintaro
+  "お母さん":"어머니","木":"나무","倒す":"쓰러뜨리다","動物":"동물","友達":"친구",
+  "一緒に":"함께","熊":"곰","すもう":"스모/씨름","する":"하다","勝つ":"이기다",
+  "魚":"물고기","捕まえる":"잡다","侍":"사무라이","びっくりする":"깜짝놀라다",
+  "武士":"무사","有名":"유명한","嬉しい":"기쁜",
+  // Issunboshi
+  "いない":"없다","いる":"있다","赤ちゃん":"아기","生まれる":"태어나다",
+  "大きさ":"크기","つける":"붙이다","都":"수도","お椀":"그릇","箸":"젓가락",
+  "着く":"도착하다","働く":"일하다","そば":"곁","好き":"좋아하는",
+  "お腹":"배","入る":"들어가다","針":"바늘","逃げる":"도망가다","魔法":"마법",
+  "小槌":"망치","落とす":"떨어뜨리다","振る":"흔들다","暮らす":"살다",
+  // extras
+  "閉める":"닫다",
+};
+function kr(word) { return KR[word] || ''; }
+
+let quizHighlightNode = null;
+let quizHighlightEdges = false;
+let quizHighlightTime = 0;
+
+function shuffle(arr) {
+  const a = [...arr];
+  for (let i = a.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [a[i], a[j]] = [a[j], a[i]];
+  }
+  return a;
+}
+
+function escHtml(s) {
+  return s.replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+
+function pickRandom(arr, n) {
+  return shuffle(arr).slice(0, n);
+}
+
+// ── Quiz Data ──
+
+// Type 1: Fill in the blank sentences
+const fillBlankData = [
+  // Momotaro
+  {sentence:"むかしむかし、おばあさんが　＿＿で　せんたくを　していました。", answer:"川", romaji:"kawa", explain:"おばあさんは 川에서 빨래를 하고 있었습니다."},
+  {sentence:"大きい　＿＿が　かわから　ながれて　きました。", answer:"桃", romaji:"momo", explain:"큰 복숭아가 강에서 떠내려 왔습니다."},
+  {sentence:"おじいさんは　＿＿で　ももを　きりました。", answer:"刀", romaji:"katana", explain:"할아버지가 칼로 복숭아를 잘랐습니다."},
+  {sentence:"ももから　元気な　＿＿が　うまれました。", answer:"男の子", romaji:"otoko no ko", explain:"복숭아에서 건강한 남자아이가 태어났습니다."},
+  {sentence:"ももたろうは　＿＿に　きびだんごを　あげました。", answer:"犬", romaji:"inu", explain:"모모타로는 개에게 기비당고를 주었습니다."},
+  {sentence:"みんなで　＿＿の　しまに　いきました。", answer:"鬼", romaji:"oni", explain:"모두 함께 도깨비 섬으로 갔습니다."},
+  {sentence:"ももたろうは　＿＿を　もって　かえりました。", answer:"宝物", romaji:"takaramono", explain:"모모타로는 보물을 가지고 돌아왔습니다."},
+  // Kaguyahime
+  {sentence:"おじいさんは　＿＿で　たけを　きっていました。", answer:"山", romaji:"yama", explain:"할아버지는 산에서 대나무를 베고 있었습니다."},
+  {sentence:"光る　＿＿が　ありました。", answer:"竹", romaji:"take", explain:"빛나는 대나무가 있었습니다."},
+  {sentence:"竹の　中に　小さい　＿＿が　いました。", answer:"女の子", romaji:"onna no ko", explain:"대나무 안에 작은 여자아이가 있었습니다."},
+  {sentence:"かぐやひめは　とても　＿＿　人に　なりました。", answer:"きれい", romaji:"kirei", explain:"카구야히메는 매우 아름다운 사람이 되었습니다."},
+  {sentence:"＿＿から　つかいが　きました。", answer:"月", romaji:"tsuki", explain:"달에서 사자가 왔습니다."},
+  {sentence:"おじいさんと　おばあさんは　とても　＿＿かったです。", answer:"悲しい", romaji:"kanashii", explain:"할아버지와 할머니는 매우 슬펐습니다."},
+  {sentence:"かぐやひめは　＿＿に　かえりました。", answer:"月", romaji:"tsuki", explain:"카구야히메는 달로 돌아갔습니다."},
+  {sentence:"＿＿の　てっぺんで　くすりを　もやしました。", answer:"富士山", romaji:"fujisan", explain:"후지산 꼭대기에서 약을 태웠습니다."},
+  // Urashimataro
+  {sentence:"うらしまたろうは　＿＿の　ちかくに　すんでいました。", answer:"海", romaji:"umi", explain:"우라시마타로는 바다 근처에 살고 있었습니다."},
+  {sentence:"こどもたちが　＿＿を　いじめていました。", answer:"亀", romaji:"kame", explain:"아이들이 거북이를 괴롭히고 있었습니다."},
+  {sentence:"かめは　おれいに　＿＿に　つれていきました。", answer:"竜宮城", romaji:"ryuuguujou", explain:"거북이는 감사로 용궁에 데려갔습니다."},
+  {sentence:"まいにち　おいしい　＿＿を　たべました。", answer:"料理", romaji:"ryouri", explain:"매일 맛있는 요리를 먹었습니다."},
+  {sentence:"＿＿が　こいしくなって　かえりたく　なりました。", answer:"家", romaji:"ie", explain:"집이 그리워져서 돌아가고 싶어졌습니다."},
+  {sentence:"ぜったいに　＿＿を　あけないで　ください。", answer:"玉手箱", romaji:"tamatebako", explain:"절대로 보물상자를 열지 마세요."},
+  // Kintaro
+  {sentence:"きんたろうは　＿＿で　おかあさんと　すんでいました。", answer:"山", romaji:"yama", explain:"금타로는 산에서 어머니와 살고 있었습니다."},
+  {sentence:"きんたろうは　＿＿を　たおすほど　つよかったです。", answer:"木", romaji:"ki", explain:"금타로는 나무를 쓰러뜨릴 정도로 강했습니다."},
+  {sentence:"きんたろうは　＿＿に　すもうで　かちました。", answer:"熊", romaji:"kuma", explain:"금타로는 곰과의 스모에서 이겼습니다."},
+  {sentence:"さむらいは　きんたろうを　みて　＿＿しました。", answer:"びっくりする", romaji:"bikkuri suru", explain:"사무라이는 금타로를 보고 깜짝 놀랐습니다."},
+  {sentence:"きんたろうは　ゆうめいな　＿＿に　なりました。", answer:"武士", romaji:"bushi", explain:"금타로는 유명한 무사가 되었습니다."},
+  // Issunboshi
+  {sentence:"ちいさい　＿＿が　うまれました。", answer:"赤ちゃん", romaji:"akachan", explain:"작은 아기가 태어났습니다."},
+  {sentence:"いっすんぼうしは　おわんを　＿＿にしました。", answer:"船", romaji:"fune", explain:"일촌법사는 그릇을 배로 사용했습니다."},
+  {sentence:"おひめさまの　＿＿で　はたらきました。", answer:"そば", romaji:"soba", explain:"공주님 곁에서 일했습니다."},
+  {sentence:"おにの　おなかの　なかに　＿＿で　さしました。", answer:"針", romaji:"hari", explain:"도깨비 배 안에서 바늘로 찔렀습니다."},
+  {sentence:"おには　まほうの　＿＿を　おとしました。", answer:"小槌", romaji:"kozuchi", explain:"도깨비는 마법의 망치를 떨어뜨렸습니다."},
+];
+
+// Type 2: Antonym pairs
+const antonymQuizData = [
+  {word:"大きい", answer:"小さい", romaji:"chiisai", explain:"大きい(크다)의 반대말은 小さい(작다)입니다."},
+  {word:"小さい", answer:"大きい", romaji:"ookii", explain:"小さい(작다)의 반대말은 大きい(크다)입니다."},
+  {word:"行く", answer:"来る", romaji:"kuru", explain:"行く(가다)의 반대말은 来る(오다)입니다."},
+  {word:"来る", answer:"行く", romaji:"iku", explain:"来る(오다)의 반대말은 行く(가다)입니다."},
+  {word:"強い", answer:"負ける", romaji:"makeru", explain:"強い(강하다)의 반대말은 負ける(지다)입니다."},
+  {word:"幸せ", answer:"悲しい", romaji:"kanashii", explain:"幸せ(행복)의 반대말은 悲しい(슬프다)입니다."},
+  {word:"悲しい", answer:"幸せ", romaji:"shiawase", explain:"悲しい(슬프다)의 반대말은 幸せ(행복)입니다."},
+  {word:"男の子", answer:"女の子", romaji:"onna no ko", explain:"男の子(남자아이)의 반대말은 女の子(여자아이)입니다."},
+  {word:"女の子", answer:"男の子", romaji:"otoko no ko", explain:"女の子(여자아이)의 반대말은 男の子(남자아이)입니다."},
+  // New antonym pairs
+  {word:"楽しい", answer:"悲しい", romaji:"kanashii", explain:"楽しい(즐겁다)의 반대말은 悲しい(슬프다)입니다."},
+  {word:"勝つ", answer:"負ける", romaji:"makeru", explain:"勝つ(이기다)의 반대말은 負ける(지다)입니다."},
+  {word:"負ける", answer:"勝つ", romaji:"katsu", explain:"負ける(지다)의 반대말은 勝つ(이기다)입니다."},
+  {word:"入る", answer:"出る", romaji:"deru", explain:"入る(들어가다)의 반대말은 出る(나오다)입니다."},
+  {word:"出る", answer:"入る", romaji:"hairu", explain:"出る(나오다)의 반대말은 入る(들어가다)입니다."},
+  {word:"開ける", answer:"閉める", romaji:"shimeru", explain:"開ける(열다)의 반대말은 閉める(닫다)입니다."},
+];
+
+// Type 3: Category sorting
+const categoryQuizData = [
+  {questionJp:"人物の　なかまでは　ないのは？", question:"人物 그룹에 속하지 않는 것은?", choices:["おじいさん","男の子","姫","桃"], answer:"桃", romaji:"momo", explain:"桃(복숭아)는 人物(사람)이 아닙니다."},
+  {questionJp:"動作（どうさ）の　ことばは　どれ？", question:"다음 중 動作(동작)에 해당하는 것은?", choices:["切る","犬","山","桃"], answer:"切る", romaji:"kiru", explain:"切る(자르다)는 동작입니다."},
+  {questionJp:"場所（ばしょ）では　ないのは？", question:"場所(장소)에 해당하지 않는 것은?", choices:["川","山","家","鬼"], answer:"鬼", romaji:"oni", explain:"鬼(도깨비)는 장소가 아닙니다."},
+  {questionJp:"動物（どうぶつ）では　ないのは？", question:"動物(동물)에 해당하지 않는 것은?", choices:["犬","猿","きじ","竹"], answer:"竹", romaji:"take", explain:"竹(대나무)는 동물이 아닙니다."},
+  {questionJp:"形容詞（けいようし）は　どれ？", question:"다음 중 形容詞(형용사)에 해당하는 것은?", choices:["大きい","川","犬","行く"], answer:"大きい", romaji:"ookii", explain:"大きい(크다)는 형용사입니다."},
+  {questionJp:"自然（しぜん）では　ないのは？", question:"自然(자연)에 해당하지 않는 것은?", choices:["桃","竹","月","洗濯"], answer:"洗濯", romaji:"sentaku", explain:"洗濯(빨래)는 자연이 아닙니다."},
+  {questionJp:"もの（物）は　どれ？", question:"다음 중 もの(사물)에 해당하는 것은?", choices:["宝物","光る","小さい","猿"], answer:"宝物", romaji:"takaramono", explain:"宝物(보물)은 사물입니다."},
+  {questionJp:"人物の　なかまは　どれ？", question:"人物(인물) 그룹에 해당하는 것은?", choices:["仲間","桃","宝物","竹"], answer:"仲間", romaji:"nakama", explain:"仲間(동료)은 사람 관련 단어입니다."},
+  // New category questions
+  {questionJp:"動物（どうぶつ）は　どれ？", question:"다음 중 動物(동물)에 해당하는 것은?", choices:["熊","武士","料理","竜宮城"], answer:"熊", romaji:"kuma", explain:"熊(곰)는 동물입니다."},
+  {questionJp:"食べ物（たべもの）は　どれ？", question:"다음 중 食べ物(먹을것)에 해당하는 것은?", choices:["料理","針","船","煙"], answer:"料理", romaji:"ryouri", explain:"料理(요리)는 음식 관련 단어입니다."},
+  {questionJp:"場所（ばしょ）は　どれ？", question:"다음 중 場所(장소)에 해당하는 것은?", choices:["竜宮城","熊","針","武士"], answer:"竜宮城", romaji:"ryuuguujou", explain:"竜宮城(용궁)는 장소입니다."},
+  {questionJp:"もの（物）では　ないのは？", question:"다음 중 もの(사물)에 해당하지 않는 것은?", choices:["玉手箱","小槌","針","遊ぶ"], answer:"遊ぶ", romaji:"asobu", explain:"遊ぶ(놀다)는 동작이지 사물이 아닙니다."},
+  {questionJp:"形容詞（けいようし）では　ないのは？", question:"다음 중 形容詞(형용사)가 아닌 것은?", choices:["楽しい","嬉しい","おいしい","捕まえる"], answer:"捕まえる", romaji:"tsukamaeru", explain:"捕まえる(잡다)는 동사이지 형용사가 아닙니다."},
+];
+
+// Type 4: Story context
+const storyContextData = [
+  // Momotaro
+  {questionJp:"ももたろうの　どうぶつの　なかまでは　ないのは？", question:"桃太郎 이야기에서 동물 친구가 아닌 것은?", choices:["犬","猿","きじ","鬼"], answer:"鬼", romaji:"oni", explain:"鬼(도깨비)는 적이지 친구가 아닙니다."},
+  {questionJp:"かぐやひめは　どこから　きましたか？", question:"かぐや姫는 어디에서 왔나요?", choices:["月","山","川","家"], answer:"月", romaji:"tsuki", explain:"카구야히메는 달에서 왔습니다."},
+  {questionJp:"おばあさんは　どこで　せんたくを　しましたか？", question:"おばあさんは 어디에서 빨래를 했나요?", choices:["川","山","家","道"], answer:"川", romaji:"kawa", explain:"할머니는 강에서 빨래를 했습니다."},
+  {questionJp:"たけの　なかに　いたのは？", question:"竹の 中에 있었던 것은?", choices:["女の子","男の子","鬼","犬"], answer:"女の子", romaji:"onna no ko", explain:"대나무 안에 여자아이가 있었습니다."},
+  {questionJp:"ももたろうが　おにに　かった　あと、もって　かえったのは？", question:"ももたろうが 鬼에게 이긴 후 가져온 것은?", choices:["宝物","きびだんご","桃","竹"], answer:"宝物", romaji:"takaramono", explain:"모모타로는 보물을 가지고 돌아왔습니다."},
+  {questionJp:"ももたろうは　どこから　うまれましたか？", question:"ももたろうは 어디에서 태어났나요?", choices:["桃","竹","川","山"], answer:"桃", romaji:"momo", explain:"모모타로는 복숭아에서 태어났습니다."},
+  {questionJp:"かぐやひめに　けっこんを　たのんだのは　なんにん？", question:"かぐや姫에게 결혼을 신청한 사람은 몇 명?", choices:["五人","三人","七人","一人"], answer:"五人", romaji:"gonin", explain:"다섯 명의 젊은이가 결혼을 신청했습니다."},
+  {questionJp:"ももたろうが　どうぶつの　なかまに　あげたのは？", question:"ももたろうが 동물 친구에게 준 것은?", choices:["きびだんご","宝物","桃","刀"], answer:"きびだんご", romaji:"kibidango", explain:"모모타로는 기비당고를 주었습니다."},
+  {questionJp:"かぐやひめが　さいごに　かえった　ところは？", question:"かぐや姫가 마지막에 돌아간 곳은?", choices:["月","山","家","川"], answer:"月", romaji:"tsuki", explain:"카구야히메는 달로 돌아갔습니다."},
+  {questionJp:"おじいさんは　やまで　なにを　していましたか？", question:"おじいさんは 산에서 무엇을 하고 있었나요?", choices:["竹を切る","洗濯","戦う","泣く"], answer:"竹を切る", romaji:"take wo kiru", explain:"할아버지는 대나무를 베고 있었습니다."},
+  // Urashimataro
+  {questionJp:"うらしまたろうは　なにを　たすけましたか？", question:"浦島太郎는 무엇을 도왔나요?", choices:["亀","犬","猿","熊"], answer:"亀", romaji:"kame", explain:"우라시마타로는 거북이를 도왔습니다."},
+  {questionJp:"かめが　つれていった　ところは？", question:"거북이가 데려간 곳은?", choices:["竜宮城","山","家","都"], answer:"竜宮城", romaji:"ryuuguujou", explain:"거북이는 용궁으로 데려갔습니다."},
+  {questionJp:"ぜったいに　あけるなと　いわれたのは？", question:"절대 열지 말라고 한 것은?", choices:["玉手箱","宝物","お椀","小槌"], answer:"玉手箱", romaji:"tamatebako", explain:"보물상자를 절대 열지 말라고 했습니다."},
+  {questionJp:"たまてばこを　あけたら　なにが　でましたか？", question:"보물상자를 열면 무엇이 나왔나요?", choices:["煙","鬼","宝物","月"], answer:"煙", romaji:"kemuri", explain:"보물상자를 열자 연기가 나왔습니다."},
+  // Kintaro
+  {questionJp:"きんたろうは　だれと　すもうを　しましたか？", question:"금타로는 누구와 스모를 했나요?", choices:["熊","犬","鬼","猿"], answer:"熊", romaji:"kuma", explain:"금타로는 곰과 스모를 했습니다."},
+  {questionJp:"きんたろうは　さいごに　なにに　なりましたか？", question:"금타로는 마지막에 무엇이 되었나요?", choices:["武士","侍","鬼","王子"], answer:"武士", romaji:"bushi", explain:"금타로는 유명한 무사가 되었습니다."},
+  {questionJp:"きんたろうは　だれと　やまに　すんでいましたか？", question:"금타로는 누구와 산에서 살았나요?", choices:["お母さん","おじいさん","おばあさん","友達"], answer:"お母さん", romaji:"okaasan", explain:"금타로는 어머니와 산에서 살았습니다."},
+  // Issunboshi
+  {questionJp:"いっすんぼうしは　なにを　ふねに　しましたか？", question:"일촌법사는 무엇을 배로 사용했나요?", choices:["お椀","箸","針","小槌"], answer:"お椀", romaji:"owan", explain:"일촌법사는 그릇을 배로 사용했습니다."},
+  {questionJp:"いっすんぼうしは　おにの　なかで　なにを　つかいましたか？", question:"일촌법사는 도깨비 안에서 무엇을 사용했나요?", choices:["針","箸","小槌","刀"], answer:"針", romaji:"hari", explain:"일촌법사는 바늘을 사용했습니다."},
+  {questionJp:"おにが　おとした　まほうの　どうぐは？", question:"도깨비가 떨어뜨린 마법의 도구는?", choices:["小槌","玉手箱","針","宝物"], answer:"小槌", romaji:"kozuchi", explain:"도깨비는 마법의 망치를 떨어뜨렸습니다."},
+];
+
+// Type 5: Scene association
+const sceneAssocData = [
+  // Momotaro / Kaguyahime
+  {word:"川", questionJp:"川と　おなじ　ばめんの　ことばは？", question:"川와 같은 장면에 등장하는 단어는?", choices:["洗濯","宝物","月","鬼"], answer:"洗濯", romaji:"sentaku", explain:"川(강)과 洗濯(빨래)는 같은 장면에 등장합니다."},
+  {word:"桃", questionJp:"桃と　おなじ　ばめんの　ことばは？", question:"桃와 같은 장면에 등장하는 단어는?", choices:["流れる","戦う","月","結婚"], answer:"流れる", romaji:"nagareru", explain:"桃(복숭아)와 流れる(흐르다)는 같은 장면입니다."},
+  {word:"鬼", questionJp:"鬼と　おなじ　ばめんの　ことばは？", question:"鬼와 같은 장면에 등장하는 단어는?", choices:["戦う","洗濯","竹","月"], answer:"戦う", romaji:"tatakau", explain:"鬼(도깨비)와 戦う(싸우다)는 같은 장면입니다."},
+  {word:"竹", questionJp:"竹と　おなじ　ばめんの　ことばは？", question:"竹와 같은 장면에 등장하는 단어는?", choices:["光る","犬","桃","宝物"], answer:"光る", romaji:"hikaru", explain:"竹(대나무)와 光る(빛나다)는 같은 장면입니다."},
+  {word:"月", questionJp:"月と　おなじ　ばめんの　ことばは？", question:"月와 같은 장면에 등장하는 단어는?", choices:["帰る","犬","桃","きびだんご"], answer:"帰る", romaji:"kaeru", explain:"月(달)과 帰る(돌아가다)는 같은 장면입니다."},
+  {word:"犬", questionJp:"犬と　おなじ　ばめんの　ことばは？", question:"犬와 같은 장면에 등장하는 단어는?", choices:["きびだんご","月","竹","洗濯"], answer:"きびだんご", romaji:"kibidango", explain:"犬(개)과 きびだんご는 같은 장면입니다."},
+  {word:"宝物", questionJp:"宝物と　おなじ　ばめんの　ことばは？", question:"宝物와 같은 장면에 등장하는 단어는?", choices:["負ける","竹","月","洗濯"], answer:"負ける", romaji:"makeru", explain:"宝物(보물)과 負ける(지다)는 같은 장면입니다."},
+  {word:"光る", questionJp:"光ると　おなじ　ばめんの　ことばは？", question:"光る와 같은 장면에 등장하는 단어는?", choices:["小さい","大きい","犬","桃"], answer:"小さい", romaji:"chiisai", explain:"光る(빛나다)와 小さい(작다)는 같은 장면입니다."},
+  // Urashimataro
+  {word:"亀", questionJp:"亀と　おなじ　ばめんの　ことばは？", question:"亀와 같은 장면에 등장하는 단어는?", choices:["助ける","料理","玉手箱","煙"], answer:"助ける", romaji:"tasukeru", explain:"亀(거북이)와 助ける(돕다)는 같은 장면입니다."},
+  {word:"料理", questionJp:"料理と　おなじ　ばめんの　ことばは？", question:"料理와 같은 장면에 등장하는 단어는?", choices:["食べる","亀","竹","桃"], answer:"食べる", romaji:"taberu", explain:"料理(요리)와 食べる(먹다)는 같은 장면입니다."},
+  {word:"玉手箱", questionJp:"玉手箱と　おなじ　ばめんの　ことばは？", question:"玉手箱와 같은 장면에 등장하는 단어는?", choices:["開ける","遊ぶ","熊","針"], answer:"開ける", romaji:"akeru", explain:"玉手箱(보물상자)와 開ける(열다)는 같은 장면입니다."},
+  // Kintaro
+  {word:"熊", questionJp:"熊と　おなじ　ばめんの　ことばは？", question:"熊와 같은 장면에 등장하는 단어는?", choices:["勝つ","亀","針","月"], answer:"勝つ", romaji:"katsu", explain:"熊(곰)와 勝つ(이기다)는 같은 장면입니다."},
+  {word:"侍", questionJp:"侍と　おなじ　ばめんの　ことばは？", question:"侍와 같은 장면에 등장하는 단어는?", choices:["びっくりする","遊ぶ","亀","料理"], answer:"びっくりする", romaji:"bikkuri suru", explain:"侍(사무라이)와 びっくりする(깜짝 놀라다)는 같은 장면입니다."},
+  // Issunboshi
+  {word:"針", questionJp:"針と　おなじ　ばめんの　ことばは？", question:"針와 같은 장면에 등장하는 단어는?", choices:["入る","遊ぶ","熊","月"], answer:"入る", romaji:"hairu", explain:"針(바늘)과 入る(들어가다)는 같은 장면입니다."},
+  {word:"小槌", questionJp:"小槌と　おなじ　ばめんの　ことばは？", question:"小槌와 같은 장면에 등장하는 단어는?", choices:["魔法","料理","亀","洗濯"], answer:"魔法", romaji:"mahou", explain:"小槌(망치)와 魔法(마법)는 같은 장면입니다."},
+  {word:"お椀", questionJp:"お椀と　おなじ　ばめんの　ことばは？", question:"お椀와 같은 장면에 등장하는 단어는?", choices:["船","熊","月","料理"], answer:"船", romaji:"fune", explain:"お椀(그릇)과 船(배)는 같은 장면입니다."},
+];
+
+// Quiz type labels
+const quizTypeLabels = {
+  fillBlank: "📝 穴埋め（あなうめ）",
+  antonym: "↔️ 反対語（はんたいご）",
+  category: "📂 仲間分け（なかまわけ）",
+  storyContext: "📖 物語（ものがたり）",
+  sceneAssoc: "🔗 場面（ばめん）",
+};
+
+let quizState = null;
+
+function generateQuizQuestions() {
+  // Generate 10 questions randomly mixed from all 5 types
+  // Aim for 2 of each type
+  const questions = [];
+
+  const fb = shuffle(fillBlankData).slice(0, 2).map(q => ({type:'fillBlank', data:q}));
+  const an = shuffle(antonymQuizData).slice(0, 2).map(q => ({type:'antonym', data:q}));
+  const ca = shuffle(categoryQuizData).slice(0, 2).map(q => ({type:'category', data:q}));
+  const sc = shuffle(storyContextData).slice(0, 2).map(q => ({type:'storyContext', data:q}));
+  const sa = shuffle(sceneAssocData).slice(0, 2).map(q => ({type:'sceneAssoc', data:q}));
+
+  questions.push(...fb, ...an, ...ca, ...sc, ...sa);
+  return shuffle(questions);
+}
+
+function findNodeByWord(word) {
+  const wid = "w_" + word;
+  return nodeMap[wid] || null;
+}
+
+function openQuiz() {
+  quizOverlay.style.display = 'flex';
+  requestAnimationFrame(() => quizOverlay.classList.add('active'));
+  showQuizStart();
+}
+
+function closeQuiz() {
+  quizOverlay.classList.remove('active');
+  setTimeout(() => { quizOverlay.style.display = 'none'; }, 300);
+  quizHighlightNode = null;
+  quizHighlightEdges = false;
+  quizState = null;
+  selectedNode = null;
+}
+
+document.getElementById('quiz-close-btn').addEventListener('click', closeQuiz);
+quizOverlay.addEventListener('click', e => { if (e.target === quizOverlay) closeQuiz(); });
+document.getElementById('btn-quiz').addEventListener('click', openQuiz);
+
+function showQuizStart() {
+  quizContent.innerHTML = `
+    <div class="quiz-title">🧩 ことばクイズ</div>
+    <div class="quiz-subtitle">5つの昔話の　ことばを　テストしましょう！</div>
+    <div style="margin:20px 0;color:#94a3b8;font-size:13px;line-height:1.8">
+      <div style="margin-bottom:6px">📝 <b style="color:#c4b5fd">穴埋め（あなうめ）</b> — ぶんの　＿＿に　はいる　ことば</div>
+      <div style="margin-bottom:6px">↔️ <b style="color:#c4b5fd">反対語（はんたいご）</b> — はんたいの　ことばを　さがす</div>
+      <div style="margin-bottom:6px">📂 <b style="color:#c4b5fd">仲間分け（なかまわけ）</b> — ことばを　わける</div>
+      <div style="margin-bottom:6px">📖 <b style="color:#c4b5fd">物語（ものがたり）</b> — おはなしの　ないよう</div>
+      <div>🔗 <b style="color:#c4b5fd">場面（ばめん）</b> — おなじ　ばめんの　ことば</div>
+    </div>
+    <div style="text-align:center;color:#64748b;font-size:12px;margin-bottom:4px">ぜんぶで　10もん · 5しゅるい · 5つの昔話</div>
+    <button class="quiz-start-btn" id="quiz-go">はじめる</button>
+  `;
+  document.getElementById('quiz-go').addEventListener('click', startQuiz);
+}
+
+function startQuiz() {
+  const questions = generateQuizQuestions();
+  quizState = { questions, current:0, score:0, total:questions.length };
+  showQuizQuestion();
+}
+
+function renderProgressBar() {
+  const pct = ((quizState.current) / quizState.total) * 100;
+  return `<div class="quiz-progress-bar"><div class="quiz-progress-fill" style="width:${pct}%"></div></div>`;
+}
+
+function showQuizQuestion() {
+  const qi = quizState.questions[quizState.current];
+  const typeLabel = quizTypeLabels[qi.type];
+
+  // Try to highlight relevant node
+  let highlightWord = null;
+  if (qi.type === 'fillBlank') highlightWord = qi.data.answer;
+  else if (qi.type === 'antonym') highlightWord = qi.data.word;
+  else if (qi.type === 'sceneAssoc') highlightWord = qi.data.word;
+  else if (qi.type === 'storyContext') highlightWord = qi.data.answer;
+  else if (qi.type === 'category') highlightWord = qi.data.answer;
+
+  const wNode = findNodeByWord(highlightWord);
+  if (wNode) {
+    quizHighlightNode = wNode;
+    selectedNode = wNode;
+    SIM.alpha = Math.max(SIM.alpha, .15);
+  } else {
+    quizHighlightNode = null;
+    selectedNode = null;
+  }
+  quizHighlightEdges = false;
+
+  let questionHTML = '';
+  let choices = [];
+  let correctAnswer = '';
+
+  switch (qi.type) {
+    case 'fillBlank': {
+      const d = qi.data;
+      correctAnswer = d.answer;
+      const allAnswers = fillBlankData.map(x => x.answer);
+      const distractors = shuffle(allAnswers.filter(a => a !== d.answer)).slice(0, 3);
+      choices = shuffle([d.answer, ...distractors]);
+      const sentenceHtml = d.sentence.replace('＿＿', '<span class="blank">＿＿＿</span>');
+      questionHTML = `
+        <div class="quiz-sentence">${sentenceHtml}</div>
+        <div class="kr-sub" style="text-align:center;font-size:12px">${d.explain ? d.explain.replace(d.answer, '＿＿') : ''}</div>
+        <div class="quiz-prompt">＿＿に　はいる　ことばは？</div>
+      `;
+      break;
+    }
+    case 'antonym': {
+      const d = qi.data;
+      correctAnswer = d.answer;
+      const allAntAnswers = antonymQuizData.map(x => x.answer);
+      const vocabWords = vocabRaw.map(v => v.w);
+      const pool = [...new Set([...allAntAnswers, ...vocabWords])].filter(a => a !== d.answer && a !== d.word);
+      const distractors = shuffle(pool).slice(0, 3);
+      choices = shuffle([d.answer, ...distractors]);
+      questionHTML = `
+        <div class="quiz-word">${d.word}${kr(d.word) ? `<div class="kr-sub" style="font-size:13px;text-align:center">${kr(d.word)}</div>` : ''}</div>
+        <div class="quiz-prompt">はんたいの　ことばは？</div>
+      `;
+      break;
+    }
+    case 'category': {
+      const d = qi.data;
+      correctAnswer = d.answer;
+      choices = shuffle([...d.choices]);
+      questionHTML = `
+        <div class="quiz-prompt" style="font-size:16px;margin:16px 0">${d.questionJp}</div>
+        <div class="kr-sub" style="text-align:center;font-size:12px">${d.question}</div>
+      `;
+      break;
+    }
+    case 'storyContext': {
+      const d = qi.data;
+      correctAnswer = d.answer;
+      choices = shuffle([...d.choices]);
+      questionHTML = `
+        <div class="quiz-prompt" style="font-size:16px;margin:16px 0">${d.questionJp}</div>
+        <div class="kr-sub" style="text-align:center;font-size:12px">${d.question}</div>
+      `;
+      break;
+    }
+    case 'sceneAssoc': {
+      const d = qi.data;
+      correctAnswer = d.answer;
+      choices = shuffle([...d.choices]);
+      questionHTML = `
+        <div class="quiz-word">${d.word}${kr(d.word) ? `<div class="kr-sub" style="font-size:13px;text-align:center">${kr(d.word)}</div>` : ''}</div>
+        <div class="quiz-prompt">${d.questionJp}</div>
+        <div class="kr-sub" style="text-align:center;font-size:12px">${d.question}</div>
+      `;
+      break;
+    }
+  }
+
+  quizContent.innerHTML = `
+    ${renderProgressBar()}
+    <div class="quiz-score">${quizState.current + 1} / ${quizState.total}　|　スコア: ${quizState.score}</div>
+    <div class="quiz-type-label">${typeLabel}</div>
+    ${questionHTML}
+    <div class="quiz-choices">
+      ${choices.map((c, i) => `<button class="quiz-choice" data-idx="${i}" data-val="${escHtml(c)}">${c}${kr(c) ? `<div class="kr-sub">${kr(c)}</div>` : ''}</button>`).join('')}
+    </div>
+  `;
+
+  quizContent.querySelectorAll('.quiz-choice').forEach(btn => {
+    btn.addEventListener('click', () => handleQuizAnswer(btn, correctAnswer, qi));
+  });
+}
+
+function handleQuizAnswer(btn, correct, qi) {
+  const val = btn.dataset.val;
+  const isCorrect = val === correct;
+  if (isCorrect) quizState.score++;
+
+  // Disable all buttons and show correct/wrong
+  quizContent.querySelectorAll('.quiz-choice').forEach(b => {
+    b.style.pointerEvents = 'none';
+    const bVal = b.dataset.val;
+    if (bVal === correct) b.classList.add('correct');
+    if (b === btn && !isCorrect) b.classList.add('wrong');
+  });
+
+  // Highlight connections on graph
+  quizHighlightEdges = true;
+  quizHighlightTime = time;
+
+  // If correct, make node glow brighter
+  if (isCorrect && quizHighlightNode) {
+    SIM.alpha = Math.max(SIM.alpha, .3);
+  }
+
+  // Build explanation
+  const footer = document.createElement('div');
+  footer.className = 'quiz-footer';
+  footer.style.flexDirection = 'column';
+  footer.style.gap = '10px';
+
+  const resultLine = document.createElement('div');
+  resultLine.style.cssText = 'font-size:13px;font-weight:700;text-align:center';
+  if (isCorrect) {
+    resultLine.textContent = 'せいかい！ ✓';
+    resultLine.style.color = '#10b981';
+  } else {
+    resultLine.innerHTML = 'ざんねん！ こたえ: <span style="color:#fcd34d">' + correct + '</span>';
+    resultLine.style.color = '#ef4444';
+  }
+  footer.appendChild(resultLine);
+
+  // Romaji hint
+  const romajiHint = document.createElement('div');
+  romajiHint.style.cssText = 'text-align:center;font-size:12px;color:#a78bfa;font-style:italic';
+  romajiHint.textContent = qi.data.romaji ? '(' + qi.data.romaji + ')' : '';
+  footer.appendChild(romajiHint);
+
+  // Korean explanation (shown via global kr-toggle)
+  const krExplain = qi.data.explain || '';
+  if (krExplain) {
+    const krText = document.createElement('div');
+    krText.className = 'kr-sub quiz-explanation';
+    krText.style.textAlign = 'center';
+    krText.textContent = krExplain;
+    footer.appendChild(krText);
+  }
+
+  // Next button
+  const nextRow = document.createElement('div');
+  nextRow.style.cssText = 'display:flex;justify-content:flex-end;margin-top:4px';
+  const nextBtn = document.createElement('button');
+  nextBtn.className = 'quiz-btn primary';
+  nextBtn.textContent = quizState.current < quizState.total - 1 ? 'つぎへ →' : 'けっか';
+  nextBtn.addEventListener('click', () => {
+    quizState.current++;
+    if (quizState.current < quizState.total) {
+      showQuizQuestion();
+    } else {
+      showQuizResults();
+    }
+  });
+  nextRow.appendChild(nextBtn);
+  footer.appendChild(nextRow);
+  quizContent.appendChild(footer);
+}
+
+function showQuizResults() {
+  quizHighlightNode = null;
+  quizHighlightEdges = false;
+  selectedNode = null;
+
+  const pct = Math.round((quizState.score / quizState.total) * 100);
+  let msg = '';
+  let emoji = '';
+  if (pct === 100) { msg = 'かんぺき！　すばらしい！'; emoji = '🎉'; }
+  else if (pct >= 80) { msg = 'すごい！　もうすこしで　かんぺき！'; emoji = '🌟'; }
+  else if (pct >= 60) { msg = 'よくできました！　もうすこし　れんしゅう！'; emoji = '👍'; }
+  else if (pct >= 40) { msg = 'がんばって！　つづけましょう！'; emoji = '💪'; }
+  else { msg = 'もういちど　チャレンジ！　できる！'; emoji = '🔥'; }
+
+  quizContent.innerHTML = `
+    <div class="quiz-title">クイズ　おわり！</div>
+    <div class="quiz-result">
+      <div style="font-size:48px;margin-bottom:8px">${emoji}</div>
+      <div class="quiz-result-label">スコア</div>
+      <div class="quiz-result-score">${quizState.score} / ${quizState.total}</div>
+      <div class="quiz-result-label">${pct}%</div>
+      <div class="quiz-result-msg">${msg}</div>
+    </div>
+    <div class="quiz-footer" style="justify-content:center;gap:12px">
+      <button class="quiz-btn" id="quiz-retry">もういちど</button>
+      <button class="quiz-btn primary" id="quiz-back-menu">はじめに　もどる</button>
+    </div>
+  `;
+  document.getElementById('quiz-retry').addEventListener('click', startQuiz);
+  document.getElementById('quiz-back-menu').addEventListener('click', showQuizStart);
+}
+
+// Override draw to add quiz highlight effect
+const _quizOrigDraw = draw;
+draw = function() {
+  _quizOrigDraw();
+
+  // Draw highlight ring around quiz node
+  if (quizHighlightNode) {
+    const n = quizHighlightNode;
+    const pulse = Math.sin(time * 4) * 0.3 + 0.7;
+    const r = (n.radius || 12) + 8;
+
+    ctx.beginPath();
+    ctx.arc(n.x, n.y, r + 4, 0, Math.PI * 2);
+    ctx.strokeStyle = `rgba(245,158,11,${pulse * 0.6})`;
+    ctx.lineWidth = 2.5;
+    ctx.stroke();
+
+    ctx.beginPath();
+    ctx.arc(n.x, n.y, r + 10, 0, Math.PI * 2);
+    ctx.strokeStyle = `rgba(245,158,11,${pulse * 0.25})`;
+    ctx.lineWidth = 1.5;
+    ctx.stroke();
+  }
+
+  // Briefly highlight edges after answering
+  if (quizHighlightEdges && quizHighlightNode) {
+    const elapsed = time - quizHighlightTime;
+    if (elapsed < 2) {
+      const fadeAlpha = Math.max(0, 1 - elapsed / 2);
+      edges.forEach(e => {
+        if (e.source === quizHighlightNode || e.target === quizHighlightNode) {
+          ctx.beginPath();
+          ctx.moveTo(e.source.x, e.source.y);
+          ctx.lineTo(e.target.x, e.target.y);
+          ctx.strokeStyle = `rgba(245,158,11,${fadeAlpha * 0.5})`;
+          ctx.lineWidth = 2.5;
+          ctx.stroke();
+        }
+      });
+    }
+  }
+};
+
+loop();
+</script>
+</body>
+</html>
