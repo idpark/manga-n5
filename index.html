@@ -175,6 +175,7 @@ a{color:var(--blue);text-decoration:none}
   margin-bottom:8px;gap:12px}
 .vocab-item-word{font-size:1.1rem;font-weight:600;min-width:80px}
 .vocab-item-reading{font-size:.8rem;color:var(--gold)}
+.vocab-emoji{font-size:1.6rem;min-width:36px;text-align:center}
 .vocab-item-meaning{font-size:.85rem;color:var(--muted);flex:1}
 .vocab-item-tts{background:none;border:none;color:var(--blue);font-size:1.1rem;cursor:pointer;padding:4px 8px}
 .n5-badge{display:inline-block;background:var(--red);color:white;font-size:.55rem;font-weight:700;
@@ -990,6 +991,57 @@ function renderVocabTab() {
   $("vocabQuizBtn").style.display = words.length >= 4 ? "block" : "none";
 }
 
+const WORD_EMOJI = {
+  // 사람
+  "おばあさん":"👵","おじいさん":"👴","男の子":"👦","女の子":"👧","赤ちゃん":"👶",
+  "お母さん":"👩","お父さん":"👨","子供":"👧","先生":"👨‍🏫","学生":"🧑‍🎓","友達":"🤝",
+  "人":"🧑","女":"👩","男":"👨","私":"🙋","家族":"👨‍👩‍👧‍👦",
+  // 動物
+  "犬":"🐕","猫":"🐱","鳥":"🐦","魚":"🐟","馬":"🐴","牛":"🐄","熊":"🐻","猿":"🐒",
+  "亀":"🐢","うさぎ":"🐰","鬼":"👹","きじ":"🐦",
+  // 自然
+  "山":"⛰️","川":"🏞️","海":"🌊","木":"🌳","花":"🌸","空":"🌤️","月":"🌙","星":"⭐",
+  "雨":"🌧️","雪":"❄️","風":"💨","太陽":"☀️","島":"🏝️","森":"🌲",
+  // 食べ物
+  "水":"💧","お茶":"🍵","ご飯":"🍚","パン":"🍞","肉":"🍖","魚":"🐟","卵":"🥚",
+  "果物":"🍎","野菜":"🥬","桃":"🍑","お酒":"🍶","牛乳":"🥛","りんご":"🍎",
+  "みかん":"🍊","きびだんご":"🍡",
+  // 場所
+  "家":"🏠","学校":"🏫","駅":"🚉","病院":"🏥","店":"🏪","会社":"🏢",
+  "部屋":"🚪","門":"🚪","都":"🏯","宮殿":"🏯",
+  // 物
+  "本":"📖","鉛筆":"✏️","時計":"⏰","電話":"📱","車":"🚗","自転車":"🚲",
+  "傘":"☂️","鍵":"🔑","箱":"📦","宝物":"💎","刀":"🗡️","舟":"⛵","船":"🚢",
+  "お金":"💰","手紙":"💌","薬":"💊","帽子":"🧢","服":"👕","靴":"👟",
+  "玉手箱":"📦","打ち出の小槌":"🔨","針":"🪡",
+  // 体
+  "目":"👁️","耳":"👂","口":"👄","手":"🤚","足":"🦶","頭":"🧠","顔":"😊","心":"❤️",
+  // 時間
+  "朝":"🌅","昼":"☀️","夜":"🌙","今日":"📅","明日":"📆","昨日":"📆",
+  // 動詞
+  "食べる":"🍽️","飲む":"🥤","見る":"👀","聞く":"👂","話す":"💬","読む":"📖",
+  "書く":"✍️","走る":"🏃","歩く":"🚶","泳ぐ":"🏊","寝る":"😴","起きる":"⏰",
+  "買う":"🛒","作る":"🔨","歌う":"🎤","踊る":"💃","遊ぶ":"🎮","勉強する":"📚",
+  "戦う":"⚔️","助ける":"🤝","帰る":"🏠","行く":"🚶","来る":"📍","乗る":"🚗",
+  "切る":"✂️","開ける":"📂","閉める":"📁","泣く":"😢","笑う":"😄",
+  // 形容詞
+  "大きい":"🔴","小さい":"🔵","高い":"📈","安い":"💸","新しい":"✨","古い":"🏚️",
+  "暑い":"🥵","寒い":"🥶","美しい":"✨","強い":"💪","弱い":"😥","速い":"⚡","遅い":"🐢",
+  "嬉しい":"😊","悲しい":"😢","怖い":"😨","楽しい":"😆","優しい":"🥰",
+  // その他
+  "洗濯":"🧺","天気":"🌤️","旅行":"✈️","仕事":"💼","音楽":"🎵","映画":"🎬",
+  "写真":"📷","誕生日":"🎂","お祝い":"🎉","結婚":"💒","お願い":"🙏",
+  // ひらがな
+  "もも":"🍑","いぬ":"🐕","ねこ":"🐱","さかな":"🐟","とり":"🐦","うみ":"🌊",
+  "やま":"⛰️","かわ":"🏞️","はな":"🌸","つき":"🌙","ほし":"⭐","あめ":"🌧️",
+  "ゆき":"❄️","そら":"🌤️","き":"🌳","みず":"💧","たべる":"🍽️","のむ":"🥤",
+  "おに":"👹","たからもの":"💎","かめ":"🐢","さる":"🐒","くま":"🐻",
+  "むかしむかし":"📜","めでたしめでたし":"🎊"
+};
+function getWordEmoji(word, reading) {
+  return WORD_EMOJI[word] || WORD_EMOJI[reading] || "";
+}
+
 function renderVocabList(words) {
   const list = $("vocabList");
   if (words.length === 0) {
@@ -998,12 +1050,14 @@ function renderVocabList(words) {
   }
   list.innerHTML = words.map(w => {
     const n5 = isN5Word(w.word) || (w.reading && isN5Word(w.reading));
+    const emoji = getWordEmoji(w.word, w.reading);
     return `<div class="vocab-item">
-    <div>
+    ${emoji ? `<span class="vocab-emoji">${emoji}</span>` : ""}
+    <div style="flex:1;min-width:0">
       <div class="vocab-item-word">${w.word}${n5 ? `<span class="n5-badge">N5</span>` : ""}</div>
       ${w.reading ? `<div class="vocab-item-reading">${w.reading}</div>` : ""}
+      <div class="vocab-item-meaning">${w.meaning}</div>
     </div>
-    <div class="vocab-item-meaning">${w.meaning}</div>
     <button class="vocab-item-tts" data-word="${w.reading || w.word}">🔊</button>
   </div>`;
   }).join("");
