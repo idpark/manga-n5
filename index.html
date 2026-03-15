@@ -945,15 +945,44 @@ function playAllPanels() {
 }
 
 // ===================== VOCAB TAB =====================
+function getAllVocabFromStories() {
+  const seen = new Map();
+  STORIES.forEach(story => {
+    story.panels.forEach(panel => {
+      if (!panel.vocab) return;
+      panel.vocab.forEach(v => {
+        const key = v.word;
+        if (!seen.has(key)) {
+          seen.set(key, { word: v.word, reading: v.reading || "", meaning: v.meaning, storyId: story.id });
+        }
+      });
+    });
+    // Also add character names as vocab
+    const charSet = new Set();
+    story.panels.forEach(panel => {
+      if (panel.characters) panel.characters.forEach(c => charSet.add(c));
+    });
+    charSet.forEach(c => {
+      if (!seen.has(c)) {
+        const meanings = {"おばあさん":"할머니","おじいさん":"할아버지","ももたろう":"모모타로",
+          "かぐやひめ":"카구야히메","うらしまたろう":"우라시마타로","おとひめ":"오토히메",
+          "つる":"학(두루미)","いっすんぼうし":"잇순보시","お姫様":"공주님","鬼":"도깨비",
+          "きんたろう":"킨타로","くま":"곰","うさぎ":"토끼","さる":"원숭이","てんぐ":"텐구",
+          "おとうさん":"아버지","おかあさん":"어머니","いぬ":"개","きじ":"꿩","亀":"거북이",
+          "男":"남자","女":"여자","乙姫":"오토히메","竜宮":"용궁"};
+        seen.set(c, { word: c, reading: "", meaning: meanings[c] || c, storyId: story.id });
+      }
+    });
+  });
+  return Array.from(seen.values());
+}
+
 function renderVocabTab() {
-  const words = getSavedWords();
+  const words = getAllVocabFromStories();
   const list = $("vocabList");
 
-  if (words.length === 0) {
-    list.innerHTML = `<div class="vocab-empty">만화를 읽으며 모르는 단어를 탭하면<br>단어장에 저장됩니다 📚</div>`;
-    $("vocabQuizBtn").style.display = "none";
-    return;
-  }
+  // Also auto-save all to state for quiz
+  words.forEach(w => saveWord(w, w.storyId, ""));
 
   // Group by story
   const byStory = {};
@@ -1052,12 +1081,12 @@ function renderVocabList(words) {
     const n5 = isN5Word(w.word) || (w.reading && isN5Word(w.reading));
     const emoji = getWordEmoji(w.word, w.reading);
     return `<div class="vocab-item">
-    ${emoji ? `<span class="vocab-emoji">${emoji}</span>` : ""}
     <div style="flex:1;min-width:0">
       <div class="vocab-item-word">${w.word}${n5 ? `<span class="n5-badge">N5</span>` : ""}</div>
       ${w.reading ? `<div class="vocab-item-reading">${w.reading}</div>` : ""}
       <div class="vocab-item-meaning">${w.meaning}</div>
     </div>
+    ${emoji ? `<span class="vocab-emoji">${emoji}</span>` : ""}
     <button class="vocab-item-tts" data-word="${w.reading || w.word}">🔊</button>
   </div>`;
   }).join("");
