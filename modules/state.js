@@ -21,6 +21,8 @@ const DEF_STATE = {
   // Quiz stats
   totalQuizzes: 0,
   totalCorrect: 0,
+  // API
+  geminiApiKey: "",
 };
 
 let state = loadState();
