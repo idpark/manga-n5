@@ -184,6 +184,23 @@ a{color:var(--blue);text-decoration:none}
   background:linear-gradient(135deg,var(--blue),var(--purple));color:white;font-size:.9rem;
   font-weight:600;cursor:pointer}
 
+/* AI Tab */
+.ai-scenarios{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:16px}
+.ai-scenario-btn{padding:8px 14px;border-radius:10px;border:1px solid var(--border);
+  background:var(--card);color:var(--text);font-size:.8rem;cursor:pointer;transition:all .2s}
+.ai-scenario-btn:active,.ai-scenario-btn.active{background:var(--purple);border-color:var(--purple);color:white}
+.ai-chat{min-height:200px;max-height:50vh;overflow-y:auto;margin-bottom:12px;display:flex;flex-direction:column;gap:10px}
+.ai-msg{padding:12px 14px;border-radius:12px;font-size:.85rem;line-height:1.6;max-width:90%;word-break:break-word;white-space:pre-wrap}
+.ai-msg.user{background:var(--blue);color:white;align-self:flex-end;border-bottom-right-radius:4px}
+.ai-msg.assistant{background:var(--card);color:var(--text);align-self:flex-start;border-bottom-left-radius:4px}
+.ai-msg.loading{color:var(--muted);font-style:italic}
+.ai-input-area{display:flex;gap:8px}
+.ai-input{flex:1;padding:10px 14px;border-radius:12px;border:1px solid var(--border);
+  background:var(--card2);color:var(--text);font-size:.85rem;outline:none}
+.ai-input:focus{border-color:var(--blue)}
+.ai-send-btn{padding:10px 20px;border-radius:12px;border:none;
+  background:linear-gradient(135deg,var(--blue),var(--purple));color:white;font-weight:600;font-size:.85rem;cursor:pointer}
+
 /* My Page */
 .my-section{padding:16px}
 .my-section h3{font-size:.9rem;color:var(--gold);margin-bottom:12px}
@@ -329,6 +346,29 @@ select.setting-select{background:var(--card);color:var(--text);border:1px solid 
   <button class="vocab-quiz-btn" id="vocabQuizBtn" style="display:none">단어 퀴즈</button>
 </div>
 
+<!-- Tab: AI -->
+<div class="tab-content" id="tab-ai">
+  <div style="padding:16px">
+    <h3 style="margin-bottom:12px">🤖 AI 일본어 튜터</h3>
+    <div class="ai-scenarios" id="aiScenarios">
+      <button class="ai-scenario-btn" data-scenario="explain">📖 이 문장 설명해줘</button>
+      <button class="ai-scenario-btn" data-scenario="grammar">📝 문법 설명</button>
+      <button class="ai-scenario-btn" data-scenario="vocab">📚 단어 활용</button>
+      <button class="ai-scenario-btn" data-scenario="culture">🏯 문화 배경</button>
+      <button class="ai-scenario-btn" data-scenario="practice">✏️ 연습 문제</button>
+      <button class="ai-scenario-btn" data-scenario="free">💬 자유 질문</button>
+    </div>
+    <div class="ai-chat" id="aiChat"></div>
+    <div class="ai-input-area">
+      <input type="text" id="aiInput" placeholder="질문을 입력하세요..." class="ai-input">
+      <button id="aiSend" class="ai-send-btn">전송</button>
+    </div>
+    <div id="aiNoKey" style="text-align:center;padding:20px;color:var(--muted);font-size:.85rem;display:none">
+      ⚠️ AI를 사용하려면 마이 페이지에서 API Key를 설정해주세요
+    </div>
+  </div>
+</div>
+
 <!-- Tab: My -->
 <div class="tab-content" id="tab-my">
   <div class="my-section">
@@ -360,12 +400,20 @@ select.setting-select{background:var(--card);color:var(--text);border:1px solid 
       </select>
     </div>
 
-    <h3 style="margin-top:24px">Gemini API</h3>
+    <h3 style="margin-top:24px">AI 설정</h3>
+    <div class="setting-row">
+      <div><div class="setting-label">AI 프로바이더</div></div>
+      <select class="setting-select" id="setAIProvider">
+        <option value="gemini">Google (Gemini)</option>
+        <option value="anthropic">Anthropic (Claude)</option>
+        <option value="openai">OpenAI (GPT)</option>
+      </select>
+    </div>
     <div class="setting-row" style="flex-direction:column;align-items:stretch;gap:8px">
-      <div><div class="setting-label">Google Gemini API Key</div>
-      <div class="setting-desc">이미지 생성에 사용됩니다. <a href="https://aistudio.google.com/apikey" target="_blank" style="color:var(--gold)">무료 발급 →</a></div></div>
+      <div><div class="setting-label">API Key</div>
+      <div class="setting-desc" id="aiKeyDesc">Gemini: <a href="https://aistudio.google.com/apikey" target="_blank" style="color:var(--gold)">무료 발급 →</a></div></div>
       <div style="display:flex;gap:8px">
-        <input type="password" id="geminiApiKey" placeholder="AIza..." style="flex:1;background:var(--card2);color:var(--text);border:1px solid var(--border);border-radius:8px;padding:8px 12px;font-size:.85rem">
+        <input type="password" id="aiApiKey" placeholder="API key 입력..." style="flex:1;background:var(--card2);color:var(--text);border:1px solid var(--border);border-radius:8px;padding:8px 12px;font-size:.85rem">
         <button id="btnSaveApiKey" style="padding:8px 16px;border-radius:8px;border:none;background:var(--gold);color:#000;font-weight:600;font-size:.8rem;cursor:pointer">저장</button>
       </div>
       <div id="apiKeyStatus" style="font-size:.7rem;color:var(--muted)"></div>
@@ -396,6 +444,7 @@ select.setting-select{background:var(--card);color:var(--text);border:1px solid 
 <nav class="tab-bar">
   <button class="tab-btn active" data-tab="manga"><span class="tab-icon">📖</span>만화</button>
   <button class="tab-btn" data-tab="vocab"><span class="tab-icon">📝</span>단어장</button>
+  <button class="tab-btn" data-tab="ai"><span class="tab-icon">🤖</span>AI</button>
   <button class="tab-btn" data-tab="my"><span class="tab-icon">👤</span>마이</button>
 </nav>
 
@@ -420,6 +469,164 @@ let quizCorrect = 0;
 let popupVocab = null;
 let popupSentence = "";
 let playingAll = false;
+
+// ===================== AI CHAT =====================
+let aiMessages = [];
+
+async function callAI(messages, systemPrompt) {
+  const state = getState();
+  const provider = state.aiProvider || "gemini";
+  const apiKey = state.aiApiKey || "";
+  if (!apiKey) throw new Error("API 키가 설정되지 않았습니다. 마이 페이지에서 설정해주세요.");
+
+  const maxTokens = 1024;
+
+  if (provider === "gemini") {
+    const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`;
+    const contents = messages.map(m => ({
+      role: m.role === "assistant" ? "model" : "user",
+      parts: [{ text: m.content }]
+    }));
+    const resp = await fetch(url, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        system_instruction: { parts: [{ text: systemPrompt }] },
+        contents,
+        generationConfig: { maxOutputTokens: maxTokens }
+      })
+    });
+    if (!resp.ok) { const err = await resp.text(); throw new Error(err); }
+    const data = await resp.json();
+    return data.candidates?.[0]?.content?.parts?.[0]?.text || "";
+  } else if (provider === "anthropic") {
+    const resp = await fetch("https://api.anthropic.com/v1/messages", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "x-api-key": apiKey,
+        "anthropic-version": "2023-06-01",
+        "anthropic-dangerous-direct-browser-access": "true"
+      },
+      body: JSON.stringify({
+        model: "claude-sonnet-4-20250514",
+        max_tokens: maxTokens,
+        system: systemPrompt,
+        messages
+      })
+    });
+    if (!resp.ok) { const err = await resp.text(); throw new Error(err); }
+    const data = await resp.json();
+    return data.content?.[0]?.text || "";
+  } else if (provider === "openai") {
+    const resp = await fetch("https://api.openai.com/v1/chat/completions", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": `Bearer ${apiKey}`
+      },
+      body: JSON.stringify({
+        model: "gpt-4o-mini",
+        max_tokens: maxTokens,
+        messages: [{ role: "system", content: systemPrompt }, ...messages]
+      })
+    });
+    if (!resp.ok) { const err = await resp.text(); throw new Error(err); }
+    const data = await resp.json();
+    return data.choices?.[0]?.message?.content || "";
+  }
+}
+
+function getAIContext() {
+  if (!currentStory) return "";
+  const panel = currentStory.panels[currentPanelIdx] || currentStory.panels[0];
+  return `현재 이야기: ${currentStory.title} (${currentStory.titleKr})\n현재 문장: ${panel.jp}\n읽기: ${panel.reading}\n번역: ${panel.kr}`;
+}
+
+const AI_SCENARIOS = {
+  explain: { label: "📖 문장 설명", prompt: "현재 보고 있는 일본어 문장을 상세히 분석해줘. 단어별 의미, 문법 구조, 뉘앙스를 한국어로 설명해줘." },
+  grammar: { label: "📝 문법 설명", prompt: "현재 문장에서 사용된 문법 포인트를 N5 수준으로 쉽게 설명해줘. 비슷한 예문도 만들어줘." },
+  vocab: { label: "📚 단어 활용", prompt: "현재 문장의 주요 단어들의 다른 활용법과 예문을 알려줘." },
+  culture: { label: "🏯 문화 배경", prompt: "이 이야기의 문화적 배경과 일본에서의 의미를 설명해줘." },
+  practice: { label: "✏️ 연습 문제", prompt: "현재 문장과 관련된 간단한 연습 문제 3개를 만들어줘. 빈칸 채우기, 번역, 문법 문제 등." },
+  free: { label: "💬 자유 질문", prompt: "" }
+};
+
+function renderAIChat() {
+  const chat = $("aiChat");
+  chat.innerHTML = aiMessages.map(m =>
+    `<div class="ai-msg ${m.role}">${m.content}</div>`
+  ).join("");
+  chat.scrollTop = chat.scrollHeight;
+}
+
+async function sendAIMessage(text) {
+  const state = getState();
+  if (!state.aiApiKey) {
+    $("aiNoKey").style.display = "block";
+    return;
+  }
+  $("aiNoKey").style.display = "none";
+
+  aiMessages.push({ role: "user", content: text });
+  renderAIChat();
+
+  // Add loading
+  const chat = $("aiChat");
+  const loading = document.createElement("div");
+  loading.className = "ai-msg assistant loading";
+  loading.textContent = "생각하는 중...";
+  chat.appendChild(loading);
+  chat.scrollTop = chat.scrollHeight;
+
+  const systemPrompt = `너는 일본어 N5 학습을 돕는 친절한 튜터야. 한국어로 답변해. 쉽고 자세하게 설명해줘.\n${getAIContext()}`;
+
+  try {
+    const msgs = aiMessages.map(m => ({ role: m.role, content: m.content }));
+    const reply = await callAI(msgs, systemPrompt);
+    loading.remove();
+    aiMessages.push({ role: "assistant", content: reply });
+    renderAIChat();
+  } catch (e) {
+    loading.remove();
+    aiMessages.push({ role: "assistant", content: `❌ 오류: ${e.message.slice(0, 200)}` });
+    renderAIChat();
+  }
+}
+
+function initAIChat() {
+  $("aiSend").addEventListener("click", () => {
+    const input = $("aiInput");
+    const text = input.value.trim();
+    if (!text) return;
+    input.value = "";
+    sendAIMessage(text);
+  });
+
+  $("aiInput").addEventListener("keypress", e => {
+    if (e.key === "Enter") {
+      e.preventDefault();
+      $("aiSend").click();
+    }
+  });
+
+  document.querySelectorAll(".ai-scenario-btn").forEach(btn => {
+    btn.addEventListener("click", () => {
+      const sc = btn.dataset.scenario;
+      const scenario = AI_SCENARIOS[sc];
+      if (sc === "free") {
+        $("aiInput").focus();
+        return;
+      }
+      const context = getAIContext();
+      if (!context) {
+        showToast("먼저 이야기를 선택해주세요", "info");
+        return;
+      }
+      sendAIMessage(scenario.prompt);
+    });
+  });
+}
 
 function init() {
   renderHeader();
@@ -951,24 +1158,39 @@ function setupEvents() {
     updateState({ ttsRate: parseFloat($("setTTSRate").value) });
   });
 
-  // Gemini API Key
-  const savedKey = getState().geminiApiKey || "";
+  // AI Provider & Key
+  const AI_KEY_HINTS = {
+    gemini: 'Gemini: <a href="https://aistudio.google.com/apikey" target="_blank" style="color:var(--gold)">무료 발급 →</a>',
+    anthropic: 'Claude: <a href="https://console.anthropic.com/" target="_blank" style="color:var(--gold)">발급 →</a>',
+    openai: 'OpenAI: <a href="https://platform.openai.com/api-keys" target="_blank" style="color:var(--gold)">발급 →</a>'
+  };
+  const s0 = getState();
+  $("setAIProvider").value = s0.aiProvider || "gemini";
+  $("aiKeyDesc").innerHTML = AI_KEY_HINTS[s0.aiProvider || "gemini"];
+  const savedKey = s0.aiApiKey || "";
   if (savedKey) {
-    $("geminiApiKey").value = savedKey;
+    $("aiApiKey").value = savedKey;
     $("apiKeyStatus").textContent = "✅ API 키가 저장되어 있습니다";
     $("apiKeyStatus").style.color = "var(--green)";
   }
+  $("setAIProvider").addEventListener("change", () => {
+    const p = $("setAIProvider").value;
+    updateState({ aiProvider: p });
+    $("aiKeyDesc").innerHTML = AI_KEY_HINTS[p];
+    $("aiApiKey").value = "";
+    $("apiKeyStatus").textContent = "";
+  });
   $("btnSaveApiKey").addEventListener("click", () => {
-    const key = $("geminiApiKey").value.trim();
-    if (!key) {
-      showToast("API 키를 입력해주세요", "error");
-      return;
-    }
-    updateState({ geminiApiKey: key });
+    const key = $("aiApiKey").value.trim();
+    if (!key) { showToast("API 키를 입력해주세요", "error"); return; }
+    updateState({ aiApiKey: key });
     $("apiKeyStatus").textContent = "✅ 저장되었습니다!";
     $("apiKeyStatus").style.color = "var(--green)";
     showToast("API 키 저장 완료!", "success");
   });
+
+  // AI Chat
+  initAIChat();
 
   // Backup
   $("btnExport").addEventListener("click", () => {
